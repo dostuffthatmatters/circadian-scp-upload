@@ -108,3 +108,33 @@ class UploadMeta(pydantic.BaseModel):
             connection.run(f"mkdir {dst_dir_path}")
             meta.dump(transfer_process=transfer_process)
             return meta
+
+
+class UploadClientCallbacks(pydantic.BaseModel):
+    """A collection of callbacks passed to the upload client."""
+
+    date_string_to_dir_file_regex: Callable[[str], str] = pydantic.Field(
+        default=(lambda date_string: r"^[\.].*" + date_string + r".*$"),
+        description=(
+            "A function that takes a `date string` and returns a regex "
+            + "string. For every `date_string`, the upload client finds, "
+            + "only consider the files that match this regex string. "
+            + "The default regex string will match any file that does "
+            + "not start with a dot and contains the `date_string`."
+        ),
+    )
+    log_info: Callable[[str], None] = pydantic.Field(
+        default=(lambda msg: print(f"INFO - {msg}")),
+        description="Function to be called when logging a message or type INFO.",
+    )
+    log_error: Callable[[str], None] = pydantic.Field(
+        default=(lambda msg: print(f"ERROR - {msg}")),
+        description="Function to be called when logging a message or type ERROR.",
+    )
+    should_abort_upload: Callable[[], bool] = pydantic.Field(
+        default=(lambda: False),
+        description="Can be used to interrupt the upload process. This "
+        + "function will be run between each file or directory and (when "
+        + "uploading large directories), after every 25 files. If it "
+        + "returns true, then the upload process will be aborted.",
+    )
