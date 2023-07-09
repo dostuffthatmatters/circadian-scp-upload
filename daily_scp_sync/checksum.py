@@ -1,3 +1,4 @@
+import argparse
 import re
 import os
 import hashlib
@@ -27,3 +28,34 @@ def get_file_checksum(path: str) -> str:
     with open(path, "rb") as f:
         hasher.update(f.read())
     return hasher.hexdigest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="checksum",
+        description="Compute MD5 checksums of files or directories.",
+    )
+    parser.add_argument(
+        "path",
+        type=str,
+        help="path to directory or file",
+        required=True,
+    )
+    parser.add_argument(
+        "file_regex",
+        type=str,
+        help="regex to match files",
+        required=False,
+        default="^[^\.].*$",
+    )
+
+    args = parser.parse_args()
+    assert isinstance(args.path, str)
+    assert isinstance(args.file_regex, str)
+
+    if os.path.isdir(args.path):
+        print(get_dir_checksum(args.path, args.file_regex))
+    elif os.path.isfile(args.path):
+        print(get_file_checksum(args.path))
+    else:
+        raise Exception(f'The path "{args.path}"does not exist')
