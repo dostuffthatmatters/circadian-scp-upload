@@ -162,4 +162,16 @@ class DailyDirectoryTransferClient:
                 break
 
 
-# TODO: class DailyFileTransferClient
+class DailyFileTransferClient:
+    def __init__(
+        self,
+        src_path: str,
+        dst_path: str,
+        remove_files_after_upload: bool,
+        remote_client: daily_scp_sync.remote_client.RemoteClient,
+        callbacks: daily_scp_sync.utils.UploadClientCallbacks,
+    ) -> None:
+        pass
+
+    def run(self) -> None:
+        pass
