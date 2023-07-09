@@ -21,6 +21,6 @@ class RemoteClient:
         assert self.connection.is_connected, "could not open the ssh connection"
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # TODO: raise the exception correctly
         self.connection.close()
