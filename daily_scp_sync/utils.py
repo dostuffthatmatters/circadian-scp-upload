@@ -1,12 +1,9 @@
 from __future__ import annotations
 import json
 import os
-import time
-from typing import Callable, Optional
+from typing import Callable
 import datetime
 import pydantic
-import fabric
-import fabric.transfer
 
 
 def _is_valid_date_string(date_string: str) -> bool:
@@ -39,75 +36,32 @@ def get_src_date_strings(src_path: str) -> list[str]:
 
 class UploadMeta(pydantic.BaseModel):
     src_dir_path: str
-    dst_dir_path: str
-    complete: bool
-    fileList: list[str]
-    createdTime: Optional[float]
-    lastModifiedTime: Optional[float]
+    uploaded_files: list[str]
 
-    @pydantic.computed_field
-    def src_meta_file_path(self) -> str:
-        return os.path.join(self.src_dir_path, "upload-meta.json")
-
-    @pydantic.computed_field
-    def dst_meta_file_path(self) -> str:
-        return f"{self.dst_dir_path}/upload-meta.json"
-
-    def dump(self, transfer_process: Optional[fabric.transfer.Transfer] = None) -> None:
-        """dumps the JSON file, and transfer it to remote if transfer_process is not None"""
-        with open(self.src_meta_file_path(), "w") as f:
-            json.dump(
-                self.model_dump(
-                    exclude={
-                        "src_dir_path",
-                        "dst_dir_path",
-                        "src_meta_file_path",
-                        "dst_meta_file_path",
-                    }
-                ),
-                f,
-                indent=4,
-            )
-        if transfer_process is not None:
-            transfer_process.put(self.src_meta_file_path(), self.dst_meta_file_path())
+    def dump(self) -> None:
+        """dumps the meta object to a JSON file"""
+        with open(os.path.join(self.src_dir_path, "upload-meta.json"), "w") as f:
+            json.dump(self.model_dump(exclude={"src_dir_path"}), f, indent=4)
 
     @staticmethod
-    def init(
-        src_dir_path: str,
-        dst_dir_path: str,
-        connection: fabric.Connection,
-        transfer_process: fabric.transfer.Transfer,
-    ) -> UploadMeta:
-        if transfer_process.is_remote_dir(dst_dir_path):
-            if os.path.isfile(src_dir_path):
-                os.remove(src_dir_path)
-            transfer_process.get(dst_dir_path, src_dir_path)
+    def init(src_dir_path: str) -> UploadMeta:
+        src_dir_path = src_dir_path.rstrip("/")
+
+        if os.path.isfile(src_dir_path):
             try:
-                with open(src_dir_path, "r") as f:
-                    return UploadMeta(
-                        **json.load(f),
-                        src_dir_path=src_dir_path,
-                        dst_dir_path=dst_dir_path,
-                    )
+                with open(os.path.join(src_dir_path, "upload-meta.json"), "r") as f:
+                    meta = UploadMeta(src_dir_path=src_dir_path, **json.load(f))
             except (
                 FileNotFoundError,
-                AssertionError,
+                TypeError,
                 json.JSONDecodeError,
                 pydantic.ValidationError,
-            ) as e:
-                raise Exception(f"could not parse remote meta file: {e}")
+            ):
+                raise Exception("could not load local upload-meta.json")
         else:
-            meta = UploadMeta(
-                src_dir_path=src_dir_path,
-                dst_dir_path=dst_dir_path,
-                complete=False,
-                fileList=[],
-                createdTime=round(time.time(), 3),
-                lastModifiedTime=round(time.time(), 3),
-            )
-            connection.run(f"mkdir {dst_dir_path}")
-            meta.dump(transfer_process=transfer_process)
-            return meta
+            meta = UploadMeta(src_dir_path=src_dir_path, uploaded_files=[])
+
+        return meta
 
 
 class UploadClientCallbacks(pydantic.BaseModel):

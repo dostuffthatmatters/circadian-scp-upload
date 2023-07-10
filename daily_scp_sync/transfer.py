@@ -73,64 +73,51 @@ class DailyDirectoryTransferClient:
         """Perform the whole upload process for a given directory.
 
         1. If the respective remote directory doesn't exist, create it
-        2. Download the current upload-meta.json file from the server
-           or use a new one
-        3. Determine which files have not been uploaded yet
-        4. Upload every file that is found locally but not in the remote
-           meta. Update the remote meta every 25 uploaded files (reduces
-           load and traffic).
+        2. Determine which files have not been uploaded yet
+        4. Upload every file that is found locally but has not been uploaded yet
         5. Test whether the checksums of "files on server" and "local ifgs"
-           are equal, raise an exception (and end the function) if the differ
-        6. Indicate that the upload process is complete in remote meta
+           are equal, raise an exception (and end the function) if they differ
+        6. Remove the remote meta file
         7. Optionally remove local ifgs"""
 
         meta = daily_scp_sync.utils.UploadMeta.init(
-            src_dir_path=f"{self.src_path}/{date_string}",
-            dst_dir_path=f"{self.dst_path}/{date_string}",
-            connection=self.remote_client.connection,
-            transfer_process=self.remote_client.transfer_process,
+            src_dir_path=f"{self.src_path}/{date_string}"
         )
+        src_dir_path = os.path.join(self.src_path, date_string)
+        src_do_not_touch_path = os.path.join(src_dir_path, ".do-not-touch")
+        dst_dir_path = f"{self.dst_path}/{date_string}"
+        dst_do_not_touch_path = f"{dst_dir_path}/.do-not-touch"
 
         # determine files present in src and dst directory
         # files should be named like "<anything>YYYYMMDD<anything>"
         file_regex = self.callbacks.date_string_to_dir_file_regex(date_string)
         raw_src_files = os.listdir(os.path.join(self.src_path, date_string))
-        src_file_set = set([f for f in raw_src_files if re.match(file_regex, f)])
-        dst_file_set = set(meta.fileList)
+        files_found_in_src = set([f for f in raw_src_files if re.match(file_regex, f)])
 
         # determine file differences between src and dst
-        files_missing_in_dst = src_file_set.difference(dst_file_set)
-        files_missing_in_src = dst_file_set.difference(src_file_set)
+        files_missing_in_dst = files_found_in_src.difference(set(meta.fileList))
 
-        # this can happen, when the process fails during the src removal
-        if len(files_missing_in_src) > 0:
-            self.callbacks.log_error(
-                f"{date_string}: files present in dst are missing in src: {files_missing_in_src}"
+        if len(files_missing_in_dst) > 0:
+            self.callbacks.log_info(
+                f"{date_string}: {len(files_missing_in_dst)} files missing in dst"
             )
-            return
+            self.remote_client.connection.run(f"mkdir -p {dst_dir_path}")
+            self.remote_client.connection.run(dst_do_not_touch_path)
+            os.system(f"touch {src_do_not_touch_path}")
 
-        # if there are files that have not been uploaded, assert that the
-        # remote meta also indicates an incomplete upload state
-        if (len(files_missing_in_dst) != 0) and meta.complete:
-            self.callbacks.log_error(
-                f"{date_string}: missing files on dst but remote meta contains complete=True"
-            )
-            return
+            if not self.remote_client.transfer_process.is_remote_dir(dst_dir_path):
+                raise NotADirectoryError(
+                    f"{date_string}: remote directory {dst_dir_path} does not exist"
+                )
 
-        # upload every file that is missing in the remote
-        # meta but present in the local directory
-        for i, f in enumerate(sorted(files_missing_in_dst)):
-            self.remote_client.transfer_process.put(
-                os.path.join(self.src_path, date_string, f),
-                f"{self.dst_path}/{date_string}/{f}",
-            )
-            meta.fileList.append(f)
-
-            # update the local meta in every loop, but only
-            # sync the remote meta every 25 iterations
-            if ((i + 1) % 25 == 0) or (i == len(files_missing_in_dst) - 1):
-                meta.dump(transfer_process=self.remote_client.transfer_process)
-            else:
+            # upload every file that is missing in the remote
+            # meta but present in the local directory
+            for i, f in enumerate(sorted(files_missing_in_dst)):
+                r = self.remote_client.transfer_process.put(
+                    os.path.join(src_dir_path, f),
+                    f"{self.dst_path}/{date_string}/{f}",
+                )
+                meta.fileList.append(f)
                 meta.dump()
 
         # raise an exception if the checksums do not match
@@ -138,14 +125,14 @@ class DailyDirectoryTransferClient:
             self.callbacks.log_error(f"{date_string}: checksums do not match")
             return
 
-        # only set meta.complete to True, when the checksums match
-        meta.complete = True
-        meta.dump(transfer_process=self.remote_client.transfer_process)
+        # only remove '.do-not-touch' file when the checksums match
+        os.system(f"rm -f {src_do_not_touch_path}")
+        self.remote_client.connection.run(f"rm -f {dst_do_not_touch_path}")
         self.callbacks.log_info(f"{date_string}: Successfully uploaded")
 
         # only remove src if configured and checksums match
         if self.remove_files_after_upload:
-            shutil.rmtree(os.path.join(self.src_path, date_string))
+            shutil.rmtree(src_dir_path)
             self.callbacks.log_info(f"{date_string}: Successfully removed source")
         else:
             self.callbacks.log_info(f"{date_string}: Skipping removal of source")
