@@ -2,7 +2,7 @@ import os
 import shutil
 import invoke
 import re
-import daily_scp_sync
+import diurnal_scp_upload
 
 
 class DailyDirectoryTransferClient:
@@ -11,8 +11,8 @@ class DailyDirectoryTransferClient:
         src_path: str,
         dst_path: str,
         remove_files_after_upload: bool,
-        remote_client: daily_scp_sync.remote_client.RemoteClient,
-        callbacks: daily_scp_sync.utils.UploadClientCallbacks,
+        remote_client: diurnal_scp_upload.RemoteClient,
+        callbacks: diurnal_scp_upload.UploadClientCallbacks,
     ) -> None:
         self.src_path = src_path.rstrip("/")
         self.dst_path = dst_path.rstrip("/")
@@ -32,7 +32,7 @@ class DailyDirectoryTransferClient:
         and will raise an exception if its not present."""
 
         file_regex = self.callbacks.date_string_to_dir_file_regex(date_string)
-        local_checksum = daily_scp_sync.checksum.get_dir_checksum(
+        local_checksum = diurnal_scp_upload.checksum.get_dir_checksum(
             os.path.join(self.src_path, date_string), file_regex
         )
         local_script_path = os.path.join(
@@ -80,7 +80,7 @@ class DailyDirectoryTransferClient:
         6. Remove the remote meta file
         7. Optionally remove local ifgs"""
 
-        meta = daily_scp_sync.utils.UploadMeta.init(
+        meta = diurnal_scp_upload.utils.UploadMeta.init(
             src_dir_path=f"{self.src_path}/{date_string}"
         )
         src_dir_path = os.path.join(self.src_path, date_string)
@@ -95,7 +95,7 @@ class DailyDirectoryTransferClient:
         files_found_in_src = set([f for f in raw_src_files if re.match(file_regex, f)])
 
         # determine file differences between src and dst
-        files_missing_in_dst = files_found_in_src.difference(set(meta.fileList))
+        files_missing_in_dst = files_found_in_src.difference(set(meta.uploaded_files))
 
         if len(files_missing_in_dst) > 0:
             self.callbacks.log_info(
@@ -117,7 +117,7 @@ class DailyDirectoryTransferClient:
                     os.path.join(src_dir_path, f),
                     f"{self.dst_path}/{date_string}/{f}",
                 )
-                meta.fileList.append(f)
+                meta.uploaded_files.append(f)
                 meta.dump()
 
         # raise an exception if the checksums do not match
@@ -138,7 +138,7 @@ class DailyDirectoryTransferClient:
             self.callbacks.log_info(f"{date_string}: Skipping removal of source")
 
     def run(self) -> None:
-        src_date_strings = daily_scp_sync.utils.get_src_date_strings(self.src_path)
+        src_date_strings = diurnal_scp_upload.utils.get_src_date_strings(self.src_path)
         self.callbacks.log_info(
             f"Found {len(src_date_strings)} directorie(s) to upload: {src_date_strings}"
         )
@@ -155,8 +155,8 @@ class DailyFileTransferClient:
         src_path: str,
         dst_path: str,
         remove_files_after_upload: bool,
-        remote_client: daily_scp_sync.remote_client.RemoteClient,
-        callbacks: daily_scp_sync.utils.UploadClientCallbacks,
+        remote_client: diurnal_scp_upload.RemoteClient,
+        callbacks: diurnal_scp_upload.UploadClientCallbacks,
     ) -> None:
         pass
 

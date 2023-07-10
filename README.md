@@ -42,7 +42,7 @@ This tool can sync the local data to a remote server via SCP for these two direc
 ## Usage
 
 ```python
-import daily_scp_sync
+import diurnal_scp_upload
 
 # Use the callbacks to customize the upload process
 # and integrate it into your own application. All callbacks
@@ -50,7 +50,7 @@ import daily_scp_sync
 # passed to the upload client. The lambda functions below
 # are the default values.
 
-upload_client_callbacks = daily_scp_sync.utils.UploadClientCallbacks(
+upload_client_callbacks = diurnal_scp_upload.UploadClientCallbacks(
     # which files to consider in the upload process
     # function from YYYYMMDD string to regex
     date_string_to_dir_file_regex=(
@@ -67,12 +67,12 @@ upload_client_callbacks = daily_scp_sync.utils.UploadClientCallbacks(
 )
 
 # teardown happens automatically when leaving the "with"-block
-with daily_scp_sync.RemoteClient(
+with diurnal_scp_upload.RemoteClient(
     "1.2.3.4", "someusername", "somepassword"
 ) as remote_client:
 
     # upload a directory full of directories "YYYYMMDD/"
-    daily_scp_sync.transfer.DailyDirectoryTransferClient(
+    diurnal_scp_upload.DailyDirectoryTransferClient(
         remote_client=remote_client,
         src_path="/path/to/data-directory-1",
         dst_path="/path/to/remote/data-directory-1",
@@ -81,7 +81,7 @@ with daily_scp_sync.RemoteClient(
     ).run()
 
     # upload a directory full of files "YYYYMMDD.txt"
-    daily_scp_sync.DailyFileTransferClient(
+    diurnal_scp_upload.DailyFileTransferClient(
         remote_client=remote_client,
         src_path="/path/to/data-directory-2",
         dst_path="/path/to/remote/data-directory-2",
