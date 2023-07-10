@@ -13,7 +13,7 @@ def provide_main_template_file() -> Generator[None, None, None]:
     with open(README_FILE_PATH, "r") as f:
         content = f.read()
     m = re.findall(
-        r"```python\n(import diurnal_scp_upload\n[^`]+)\n```",
+        r"```python\n(import circadian_scp_upload\n[^`]+)\n```",
         content,
         re.MULTILINE,
     )
@@ -26,8 +26,8 @@ def provide_main_template_file() -> Generator[None, None, None]:
 
 
 def test_static_types(provide_main_template_file: None) -> None:
-    assert os.system("rm -rf .mypy_cache/3.11/diurnal_scp_upload") == 0
-    assert os.system("mypy diurnal_scp_upload") == 0
+    assert os.system("rm -rf .mypy_cache/3.11/circadian_scp_upload") == 0
+    assert os.system("mypy circadian_scp_upload") == 0
 
     assert os.system("rm -rf .mypy_cache/3.11/main_template.*") == 0
     assert os.system(f"mypy {PY_FILE_PATH}") == 0
