@@ -167,7 +167,7 @@ class DailyDirectoryTransferClient:
 
     def run(self) -> None:
         src_date_strings = circadian_scp_upload.utils.get_src_date_strings(
-            self.src_path
+            self.src_path, variant="directories"
         )
         self.callbacks.log_info(
             f"Found {len(src_date_strings)} directorie(s) to upload: {src_date_strings}"

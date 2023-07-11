@@ -1,7 +1,8 @@
 from __future__ import annotations
 import json
 import os
-from typing import Callable
+import re
+from typing import Callable, Literal
 import datetime
 import pydantic
 
@@ -20,18 +21,26 @@ def _is_valid_date_string(date_string: str) -> bool:
         return False
 
 
-def get_src_date_strings(src_path: str) -> list[str]:
+def get_src_date_strings(
+    src_path: str, variant: Literal["directories", "files"]
+) -> list[str]:
     if not os.path.isdir(src_path):
-        return []
+        raise Exception(f'path "{src_path}" is not a directory')
 
-    return [
-        date_string
-        for date_string in os.listdir(src_path)
-        if (
-            os.path.isdir(os.path.join(src_path, date_string))
-            and _is_valid_date_string(date_string)
-        )
-    ]
+    if variant == "directories":
+        output: list[str] = []
+        for subfile in os.listdir(src_path):
+            subpath = os.path.join(src_path, subfile)
+            if variant == "directories":
+                if os.path.isdir(subpath):
+                    output.append(subpath)
+            else:
+                date_string_matches = re.findall(r"^.*(2\d{7}).*$", subfile)
+                if len(date_string_matches) == 1:
+                    assert isinstance(date_string_matches[0], str)
+                    output.append(date_string_matches[0])
+
+        return list(filter(_is_valid_date_string, output))
 
 
 class UploadMeta(pydantic.BaseModel):
