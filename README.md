@@ -67,13 +67,13 @@ upload_client_callbacks = circadian_scp_upload.UploadClientCallbacks(
 )
 
 # teardown happens automatically when leaving the "with"-block
-with circadian_scp_upload.RemoteClient(
+with circadian_scp_upload.RemoteConnection(
     "1.2.3.4", "someusername", "somepassword"
-) as remote_client:
+) as remote_connection:
 
     # upload a directory full of directories "YYYYMMDD/"
     circadian_scp_upload.DailyDirectoryTransferClient(
-        remote_client=remote_client,
+        remote_connection=remote_connection,
         src_path="/path/to/data-directory-1",
         dst_path="/path/to/remote/data-directory-1",
         remove_files_after_upload=True,
@@ -82,7 +82,7 @@ with circadian_scp_upload.RemoteClient(
 
     # upload a directory full of files "YYYYMMDD.txt"
     circadian_scp_upload.DailyFileTransferClient(
-        remote_client=remote_client,
+        remote_connection=remote_connection,
         src_path="/path/to/data-directory-2",
         dst_path="/path/to/remote/data-directory-2",
         remove_files_after_upload=True,

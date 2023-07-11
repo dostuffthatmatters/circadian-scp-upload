@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import Any
+import fabric.connection
+import fabric.transfer
 import os
 import shutil
 import invoke
@@ -5,20 +9,42 @@ import re
 import circadian_scp_upload
 
 
+class RemoteConnection:
+    def __init__(self, host: str, username: str, password: str) -> None:
+        self.host = host
+        self.username = username
+        self.password = password
+        self.connection = fabric.connection.Connection(
+            f"{self.username}@{self.host}",
+            connect_kwargs={"password": self.password},
+            connect_timeout=5,
+        )
+        self.transfer_process = fabric.transfer.Transfer(self.connection)
+
+    def __enter__(self) -> RemoteConnection:
+        self.connection.open()
+        assert self.connection.is_connected, "could not open the ssh connection"
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        # TODO: raise the exception correctly
+        self.connection.close()
+
+
 class DailyDirectoryTransferClient:
     def __init__(
         self,
+        remote_connection: RemoteConnection,
         src_path: str,
         dst_path: str,
         remove_files_after_upload: bool,
-        remote_client: circadian_scp_upload.RemoteClient,
         callbacks: circadian_scp_upload.UploadClientCallbacks,
     ) -> None:
         self.src_path = src_path.rstrip("/")
         self.dst_path = dst_path.rstrip("/")
         self.remove_files_after_upload = remove_files_after_upload
-        self.remote_client = remote_client
-        assert self.remote_client.transfer_process.is_remote_dir(
+        self.remote_connection = remote_connection
+        assert self.remote_connection.transfer_process.is_remote_dir(
             self.dst_path
         ), f"remote {self.dst_path} is not a directory"
         self.callbacks = callbacks
@@ -40,10 +66,12 @@ class DailyDirectoryTransferClient:
         )
         remote_dir_path = f"{self.dst_path}/{date_string}"
         remote_script_path = f"{remote_dir_path}/checksum.py"
-        self.remote_client.transfer_process.put(local_script_path, remote_script_path)
+        self.remote_connection.transfer_process.put(
+            local_script_path, remote_script_path
+        )
 
         try:
-            self.remote_client.connection.run(
+            self.remote_connection.connection.run(
                 "python3.10 --version", hide=True, in_stream=False
             )
         except invoke.exceptions.UnexpectedExit:
@@ -53,7 +81,7 @@ class DailyDirectoryTransferClient:
             remote_command = (
                 f'python3.10 {remote_script_path} "{remote_dir_path}" "{file_regex}"'
             )
-            a: invoke.runners.Result = self.remote_client.connection.run(
+            a: invoke.runners.Result = self.remote_connection.connection.run(
                 f'python3.10 {remote_script_path} "{remote_dir_path}" "{file_regex}"',
                 hide=True,
                 in_stream=False,
@@ -101,11 +129,11 @@ class DailyDirectoryTransferClient:
             self.callbacks.log_info(
                 f"{date_string}: {len(files_missing_in_dst)} files missing in dst"
             )
-            self.remote_client.connection.run(f"mkdir -p {dst_dir_path}")
-            self.remote_client.connection.run(dst_do_not_touch_path)
+            self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
+            self.remote_connection.connection.run(dst_do_not_touch_path)
             os.system(f"touch {src_do_not_touch_path}")
 
-            if not self.remote_client.transfer_process.is_remote_dir(dst_dir_path):
+            if not self.remote_connection.transfer_process.is_remote_dir(dst_dir_path):
                 raise NotADirectoryError(
                     f"{date_string}: remote directory {dst_dir_path} does not exist"
                 )
@@ -113,7 +141,7 @@ class DailyDirectoryTransferClient:
             # upload every file that is missing in the remote
             # meta but present in the local directory
             for i, f in enumerate(sorted(files_missing_in_dst)):
-                r = self.remote_client.transfer_process.put(
+                r = self.remote_connection.transfer_process.put(
                     os.path.join(src_dir_path, f),
                     f"{self.dst_path}/{date_string}/{f}",
                 )
@@ -127,7 +155,7 @@ class DailyDirectoryTransferClient:
 
         # only remove '.do-not-touch' file when the checksums match
         os.system(f"rm -f {src_do_not_touch_path}")
-        self.remote_client.connection.run(f"rm -f {dst_do_not_touch_path}")
+        self.remote_connection.connection.run(f"rm -f {dst_do_not_touch_path}")
         self.callbacks.log_info(f"{date_string}: Successfully uploaded")
 
         # only remove src if configured and checksums match
@@ -154,10 +182,10 @@ class DailyDirectoryTransferClient:
 class DailyFileTransferClient:
     def __init__(
         self,
+        remote_connection: RemoteConnection,
         src_path: str,
         dst_path: str,
         remove_files_after_upload: bool,
-        remote_client: circadian_scp_upload.RemoteClient,
         callbacks: circadian_scp_upload.UploadClientCallbacks,
     ) -> None:
         pass

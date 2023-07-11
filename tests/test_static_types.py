@@ -26,8 +26,8 @@ def provide_main_template_file() -> Generator[None, None, None]:
 
 
 def test_static_types(provide_main_template_file: None) -> None:
-    assert os.system("rm -rf .mypy_cache/3.11/circadian_scp_upload") == 0
+    assert os.system("rm -rf .mypy_cache/3.*/circadian_scp_upload") == 0
     assert os.system("mypy circadian_scp_upload") == 0
 
-    assert os.system("rm -rf .mypy_cache/3.11/main_template.*") == 0
+    assert os.system("rm -rf .mypy_cache/3.*/main_template.*") == 0
     assert os.system(f"mypy {PY_FILE_PATH}") == 0
