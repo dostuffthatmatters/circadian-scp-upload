@@ -9,6 +9,9 @@ import re
 import circadian_scp_upload
 
 
+import traceback
+
+
 class RemoteConnection:
     def __init__(self, host: str, username: str, password: str) -> None:
         self.host = host
@@ -27,8 +30,10 @@ class RemoteConnection:
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        # TODO: raise the exception correctly
         self.connection.close()
+        if exc_type is not None:
+            traceback.print_exception(exc_type, exc_val, exc_tb)
+            raise Exception("The remote connection was closed due to an error.")
 
 
 class DailyDirectoryTransferClient:
