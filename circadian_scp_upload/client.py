@@ -138,15 +138,25 @@ class DailyDirectoryTransferClient:
                     f"{date_string}: remote directory {dst_dir_path} does not exist"
                 )
 
+            progress: float = len(meta.uploaded_files) / len(files_found_in_src)
+
             # upload every file that is missing in the remote
             # meta but present in the local directory
-            for i, f in enumerate(sorted(files_missing_in_dst)):
-                r = self.remote_connection.transfer_process.put(
+            for f in sorted(files_missing_in_dst):
+                self.remote_connection.transfer_process.put(
                     os.path.join(src_dir_path, f),
                     f"{self.dst_path}/{date_string}/{f}",
                 )
                 meta.uploaded_files.append(f)
                 meta.dump()
+                new_progress = len(meta.uploaded_files) / len(files_found_in_src)
+                if int(new_progress * 10) != int(progress * 10):
+                    self.callbacks.log_info(
+                        f"{date_string}: {progress * 100:.2f}% "
+                        + f"({len(meta.uploaded_files)}/{len(files_found_in_src)})"
+                        + f" uploaded"
+                    )
+                progress = new_progress
 
         # raise an exception if the checksums do not match
         if not self.__directory_checksums_match(date_string):
