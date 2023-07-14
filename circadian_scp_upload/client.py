@@ -9,6 +9,9 @@ import invoke
 import re
 import circadian_scp_upload
 
+# TODO: make filelock with clause for both local and remote
+# TODO: make directory upload interruptable at 10 % steps
+
 
 class RemoteConnection:
     def __init__(self, host: str, username: str, password: str) -> None:
