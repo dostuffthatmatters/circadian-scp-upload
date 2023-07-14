@@ -91,7 +91,7 @@ class UploadMeta(pydantic.BaseModel):
 class UploadClientCallbacks(pydantic.BaseModel):
     """A collection of callbacks passed to the upload client."""
 
-    date_string_to_dir_file_regex: Callable[[str], str] = pydantic.Field(
+    date_string_to_file_regex: Callable[[str], str] = pydantic.Field(
         default=(lambda date_string: r"^[\.].*" + date_string + r".*$"),
         description=(
             "A function that takes a `date string` and returns a regex "

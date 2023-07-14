@@ -53,7 +53,7 @@ import circadian_scp_upload
 upload_client_callbacks = circadian_scp_upload.UploadClientCallbacks(
     # which files to consider in the upload process
     # function from YYYYMMDD string to regex
-    date_string_to_dir_file_regex=(
+    date_string_to_file_regex=(
         lambda date_string: r"^[\.].*" + date_string + r".*$"
     ),
 

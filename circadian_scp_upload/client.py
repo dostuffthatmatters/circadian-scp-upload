@@ -59,7 +59,7 @@ class DailyTransferClient:
         This script requires the server to have Python 3.10 installed
         and will raise an exception if its not present."""
 
-        file_regex = self.callbacks.date_string_to_dir_file_regex(date_string)
+        file_regex = self.callbacks.date_string_to_file_regex(date_string)
         local_checksum = circadian_scp_upload.checksum.get_dir_checksum(
             os.path.join(self.src_path, date_string), file_regex
         )
@@ -98,7 +98,9 @@ class DailyTransferClient:
 
         return local_checksum == remote_checksum
 
-    def __upload_date_directory(self, date_string: str) -> None:
+    def __upload_date_directory(
+        self, date_string: str
+    ) -> Literal["successful", "failed", "aborted"]:
         """Perform the whole upload process for a given directory.
 
         1. If the respective remote directory doesn't exist, create it
@@ -109,18 +111,17 @@ class DailyTransferClient:
         6. Remove the remote meta file
         7. Optionally remove local ifgs"""
 
-        meta = circadian_scp_upload.utils.UploadMeta.init(
-            src_dir_path=f"{self.src_path}/{date_string}"
-        )
         src_dir_path = os.path.join(self.src_path, date_string)
         dst_dir_path = f"{self.dst_path}/{date_string}"
+
+        meta = circadian_scp_upload.utils.UploadMeta.init(src_dir_path=src_dir_path)
 
         src_do_not_touch_path = os.path.join(src_dir_path, ".do-not-touch")
         dst_do_not_touch_path = f"{dst_dir_path}/.do-not-touch"
 
         # determine files present in src and dst directory
         # files should be named like "<anything>YYYYMMDD<anything>"
-        file_regex = self.callbacks.date_string_to_dir_file_regex(date_string)
+        file_regex = self.callbacks.date_string_to_file_regex(date_string)
         raw_src_files = os.listdir(os.path.join(self.src_path, date_string))
         files_found_in_src = set([f for f in raw_src_files if re.match(file_regex, f)])
 
@@ -165,21 +166,63 @@ class DailyTransferClient:
             # raise an exception if the checksums do not match
             if not self.__directory_checksums_match(date_string):
                 self.callbacks.log_error(f"{date_string}: checksums do not match")
-                return
+                return "failed"
 
         # only remove '.do-not-touch' file when the checksums match
         self.remote_connection.connection.run(f"rm -f {dst_do_not_touch_path}")
-        self.callbacks.log_info(f"{date_string}: Successfully uploaded")
+        self.callbacks.log_info(f"{date_string}: finished uploading")
 
         # only remove src if configured and checksums match
         if self.remove_files_after_upload:
             shutil.rmtree(src_dir_path)
-            self.callbacks.log_info(f"{date_string}: Successfully removed source")
+            self.callbacks.log_info(f"{date_string}: finished removing source")
         else:
-            self.callbacks.log_info(f"{date_string}: Skipping removal of source")
+            self.callbacks.log_info(f"{date_string}: skipped removal of source")
 
-    def __upload_date_files(self, date_string: str) -> None:
-        pass
+        return "successful"
+
+    def __upload_date_files(
+        self, date_string: str
+    ) -> Literal["successful", "failed", "aborted"]:
+        meta = circadian_scp_upload.utils.UploadMeta.init(src_dir_path=self.src_path)
+
+        src_do_not_touch_path = os.path.join(self.src_path, ".do-not-touch")
+        dst_do_not_touch_path = f"{self.dst_path}/.do-not-touch"
+
+        # determine file differences between src and dst
+        file_regex = self.callbacks.date_string_to_file_regex(date_string)
+        files_missing_in_dst = set(
+            [f for f in os.listdir(self.src_path) if re.match(file_regex, f)]
+        ).difference(set(meta.uploaded_files))
+        self.callbacks.log_info(
+            f"{date_string}: {len(files_missing_in_dst)} files missing in dst"
+        )
+
+        with filelock.FileLock(src_do_not_touch_path).acquire(timeout=0):
+            if len(files_missing_in_dst) > 0:
+                self.remote_connection.connection.run(f"touch {dst_do_not_touch_path}")
+
+                # upload every file that is missing in the remote
+                # meta but present in the local directory
+                for f in sorted(files_missing_in_dst):
+                    self.remote_connection.transfer_process.put(
+                        os.path.join(self.src_path, f),
+                        f"{self.dst_path}/{f}",
+                    )
+                    if self.remove_files_after_upload:
+                        os.remove(os.path.join(self.src_path, f))
+                    meta.uploaded_files.append(f)
+                    meta.dump()
+
+            # raise an exception if the checksums do not match
+            if not self.__directory_checksums_match(date_string):
+                self.callbacks.log_error(f"{date_string}: checksums do not match")
+                return "failed"
+
+        # only remove '.do-not-touch' file when the checksums match
+        self.remote_connection.connection.run(f"rm -f {dst_do_not_touch_path}")
+
+        return "successful"
 
     def run(self) -> None:
         src_date_strings = circadian_scp_upload.utils.get_src_date_strings(
@@ -190,11 +233,15 @@ class DailyTransferClient:
         )
         for date_string in src_date_strings:
             self.callbacks.log_info(f"{date_string}: starting")
+
+            final_state: Literal["successful", "failed", "aborted"]
             if self.variant == "directories":
-                self.__upload_date_directory(date_string)
+                final_state = self.__upload_date_directory(date_string)
             else:
-                self.__upload_date_files(date_string)
-            self.callbacks.log_info(f"{date_string}: finished")
+                final_state = self.__upload_date_files(date_string)
+
+            self.callbacks.log_info(f"{date_string}: {final_state}")
+
             if self.callbacks.should_abort_upload():
                 self.callbacks.log_info("Aborting upload")
                 break
