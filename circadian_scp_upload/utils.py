@@ -7,6 +7,7 @@ import datetime
 import pydantic
 import glob
 import filelock
+import fabric.connection
 
 
 def _is_valid_date_string(date_string: str) -> bool:
@@ -116,3 +117,25 @@ class UploadClientCallbacks(pydantic.BaseModel):
         + "uploading large directories), after every 25 files. If it "
         + "returns true, then the upload process will be aborted.",
     )
+
+
+class TwinFileLock:
+    def __init__(
+        self,
+        local_dir_path: str,
+        remote_dir_path: str,
+        remote_connection: fabric.connection.Connection,
+    ):
+        self.src_filepath = os.path.join(local_dir_path, ".do-not-touch")
+        self.dst_filepath = f"{remote_dir_path}/.do-not-touch"
+
+        self.src_filelock = filelock.FileLock(self.src_filepath)
+        self.remote_connection = remote_connection
+
+    def __enter__(self):
+        self.src_filelock.acquire(timeout=0)
+        self.remote_connection.run(f"touch {self.dst_filepath}")
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.remote_connection.run(f"rm -r {self.dst_filepath}")
+        self.src_filelock.release()

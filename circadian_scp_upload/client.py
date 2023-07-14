@@ -4,12 +4,10 @@ import fabric.connection
 import fabric.transfer
 import os
 import shutil
-import filelock
 import invoke
 import re
 import circadian_scp_upload
 
-# TODO: make filelock with clause for both local and remote
 # TODO: make directory upload interruptable at 10 % steps
 
 
@@ -116,11 +114,7 @@ class DailyTransferClient:
 
         src_dir_path = os.path.join(self.src_path, date_string)
         dst_dir_path = f"{self.dst_path}/{date_string}"
-
         meta = circadian_scp_upload.utils.UploadMeta.init(src_dir_path=src_dir_path)
-
-        src_do_not_touch_path = os.path.join(src_dir_path, ".do-not-touch")
-        dst_do_not_touch_path = f"{dst_dir_path}/.do-not-touch"
 
         # determine files present in src and dst directory
         # files should be named like "<anything>YYYYMMDD<anything>"
@@ -134,46 +128,43 @@ class DailyTransferClient:
             f"{date_string}: {len(files_missing_in_dst)} files missing in dst"
         )
 
-        with filelock.FileLock(src_do_not_touch_path).acquire(timeout=0):
-            if len(files_missing_in_dst) > 0:
-                self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
-                self.remote_connection.connection.run(f"touch {dst_do_not_touch_path}")
+        if len(files_missing_in_dst) > 0:
+            self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
 
-                if not self.remote_connection.transfer_process.is_remote_dir(
-                    dst_dir_path
-                ):
-                    raise NotADirectoryError(
-                        f"{date_string}: remote directory {dst_dir_path} does not exist"
+        with circadian_scp_upload.utils.TwinFileLock(
+            src_dir_path, dst_dir_path, self.remote_connection.connection
+        ):
+            if not self.remote_connection.transfer_process.is_remote_dir(dst_dir_path):
+                raise NotADirectoryError(
+                    f"{date_string}: remote directory {dst_dir_path} does not exist"
+                )
+
+            progress: float = len(meta.uploaded_files) / len(files_found_in_src)
+
+            # upload every file that is missing in the remote
+            # meta but present in the local directory
+            for f in sorted(files_missing_in_dst):
+                self.remote_connection.transfer_process.put(
+                    os.path.join(src_dir_path, f),
+                    f"{self.dst_path}/{date_string}/{f}",
+                )
+                meta.uploaded_files.append(f)
+                meta.dump()
+                new_progress = len(meta.uploaded_files) / len(files_found_in_src)
+                if int(new_progress * 10) != int(progress * 10):
+                    self.callbacks.log_info(
+                        f"{date_string}: {progress * 100:.2f}% "
+                        + f"({len(meta.uploaded_files)}/{len(files_found_in_src)})"
+                        + f" uploaded"
                     )
-
-                progress: float = len(meta.uploaded_files) / len(files_found_in_src)
-
-                # upload every file that is missing in the remote
-                # meta but present in the local directory
-                for f in sorted(files_missing_in_dst):
-                    self.remote_connection.transfer_process.put(
-                        os.path.join(src_dir_path, f),
-                        f"{self.dst_path}/{date_string}/{f}",
-                    )
-                    meta.uploaded_files.append(f)
-                    meta.dump()
-                    new_progress = len(meta.uploaded_files) / len(files_found_in_src)
-                    if int(new_progress * 10) != int(progress * 10):
-                        self.callbacks.log_info(
-                            f"{date_string}: {progress * 100:.2f}% "
-                            + f"({len(meta.uploaded_files)}/{len(files_found_in_src)})"
-                            + f" uploaded"
-                        )
-                    progress = new_progress
+                progress = new_progress
 
             # raise an exception if the checksums do not match
             if not self.__directory_checksums_match(date_string):
                 self.callbacks.log_error(f"{date_string}: checksums do not match")
                 return "failed"
 
-        # only remove '.do-not-touch' file when the checksums match
-        self.remote_connection.connection.run(f"rm -f {dst_do_not_touch_path}")
-        self.callbacks.log_info(f"{date_string}: finished uploading")
+            self.callbacks.log_info(f"{date_string}: finished uploading")
 
         # only remove src if configured and checksums match
         if self.remove_files_after_upload:
@@ -184,13 +175,8 @@ class DailyTransferClient:
 
         return "successful"
 
-    def __upload_date_files(
-        self, date_string: str
-    ) -> Literal["successful", "failed", "aborted"]:
+    def __upload_date_files(self, date_string: str) -> Literal["successful", "failed"]:
         meta = circadian_scp_upload.utils.UploadMeta.init(src_dir_path=self.src_path)
-
-        src_do_not_touch_path = os.path.join(self.src_path, ".do-not-touch")
-        dst_do_not_touch_path = f"{self.dst_path}/.do-not-touch"
 
         # determine file differences between src and dst
         file_regex = self.callbacks.date_string_to_file_regex(date_string)
@@ -201,29 +187,20 @@ class DailyTransferClient:
             f"{date_string}: {len(files_missing_in_dst)} files missing in dst"
         )
 
-        with filelock.FileLock(src_do_not_touch_path).acquire(timeout=0):
-            if len(files_missing_in_dst) > 0:
-                self.remote_connection.connection.run(f"touch {dst_do_not_touch_path}")
-
-                # upload every file that is missing in the remote
-                # meta but present in the local directory
-                for f in sorted(files_missing_in_dst):
-                    self.remote_connection.transfer_process.put(
-                        os.path.join(self.src_path, f),
-                        f"{self.dst_path}/{f}",
-                    )
-                    if self.remove_files_after_upload:
-                        os.remove(os.path.join(self.src_path, f))
-                    meta.uploaded_files.append(f)
-                    meta.dump()
-
-            # raise an exception if the checksums do not match
-            if not self.__directory_checksums_match(date_string):
-                self.callbacks.log_error(f"{date_string}: checksums do not match")
-                return "failed"
-
-        # only remove '.do-not-touch' file when the checksums match
-        self.remote_connection.connection.run(f"rm -f {dst_do_not_touch_path}")
+        with circadian_scp_upload.utils.TwinFileLock(
+            self.src_path, self.dst_path, self.remote_connection.connection
+        ):
+            # upload every file that is missing in the remote
+            # meta but present in the local directory
+            for f in sorted(files_missing_in_dst):
+                self.remote_connection.transfer_process.put(
+                    os.path.join(self.src_path, f),
+                    f"{self.dst_path}/{f}",
+                )
+                if self.remove_files_after_upload:
+                    os.remove(os.path.join(self.src_path, f))
+                meta.uploaded_files.append(f)
+                meta.dump()
 
         return "successful"
 
@@ -237,13 +214,14 @@ class DailyTransferClient:
         for date_string in src_date_strings:
             self.callbacks.log_info(f"{date_string}: starting")
 
-            final_state: Literal["successful", "failed", "aborted"]
             if self.variant == "directories":
-                final_state = self.__upload_date_directory(date_string)
-            else:
-                final_state = self.__upload_date_files(date_string)
-
-            self.callbacks.log_info(f"{date_string}: {final_state}")
+                self.callbacks.log_info(
+                    f"{date_string}: {self.__upload_date_directory(date_string)}"
+                )
+            elif self.variant == "files":
+                self.callbacks.log_info(
+                    f"{date_string}: {self.__upload_date_files(date_string)}"
+                )
 
             if self.callbacks.should_abort_upload():
                 self.callbacks.log_info("Aborting upload")
