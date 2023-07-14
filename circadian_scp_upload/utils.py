@@ -5,6 +5,8 @@ import re
 from typing import Callable, Literal
 import datetime
 import pydantic
+import glob
+import filelock
 
 
 def _is_valid_date_string(date_string: str) -> bool:
@@ -27,20 +29,33 @@ def get_src_date_strings(
     if not os.path.isdir(src_path):
         raise Exception(f'path "{src_path}" is not a directory')
 
-    if variant == "directories":
-        output: list[str] = []
-        for subfile in os.listdir(src_path):
-            subpath = os.path.join(src_path, subfile)
-            if variant == "directories":
-                if os.path.isdir(subpath):
-                    output.append(subpath)
-            else:
-                date_string_matches = re.findall(r"^.*(2\d{7}).*$", subfile)
-                if len(date_string_matches) == 1:
-                    assert isinstance(date_string_matches[0], str)
-                    output.append(date_string_matches[0])
+    for do_not_touch_filepath in glob.glob(
+        os.path.join(src_path, "**", ".do-not-touch"), recursive=True
+    ):
+        if filelock.FileLock(do_not_touch_filepath).is_locked:
+            raise Exception(
+                f"path is used by another upload process: "
+                + f"filelock at {do_not_touch_filepath} is locked"
+            )
 
-        return list(filter(_is_valid_date_string, output))
+    output: list[str] = []
+    for filename in os.listdir(src_path):
+        filepath = os.path.join(src_path, filename)
+        try:
+            if variant == "directories":
+                assert os.path.isdir(filepath)
+                assert _is_valid_date_string(filename)
+                output.append(filename)
+            else:
+                date_string_matches = re.findall(r"^.*(2\d{7}).*$", filename)
+                assert len(date_string_matches) == 1
+                assert isinstance(date_string_matches[0], str)
+                assert _is_valid_date_string(date_string_matches[0])
+                output.append(date_string_matches[0])
+        except AssertionError:
+            pass
+
+    return list(set(output))
 
 
 class UploadMeta(pydantic.BaseModel):
