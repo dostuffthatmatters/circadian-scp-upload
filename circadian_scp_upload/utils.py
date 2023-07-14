@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Callable, Literal
+from typing import Any, Callable, Literal
 import datetime
 import pydantic
 import glob
@@ -132,10 +132,10 @@ class TwinFileLock:
         self.src_filelock = filelock.FileLock(self.src_filepath)
         self.remote_connection = remote_connection
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.src_filelock.acquire(timeout=0)
         self.remote_connection.run(f"touch {self.dst_filepath}")
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         self.remote_connection.run(f"rm -r {self.dst_filepath}")
         self.src_filelock.release()

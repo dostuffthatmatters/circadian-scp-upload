@@ -8,8 +8,6 @@ import invoke
 import re
 import circadian_scp_upload
 
-# TODO: make directory upload interruptable at 10 % steps
-
 
 class RemoteConnection:
     def __init__(self, host: str, username: str, password: str) -> None:
@@ -157,6 +155,8 @@ class DailyTransferClient:
                         + f"({len(meta.uploaded_files)}/{len(files_found_in_src)})"
                         + f" uploaded"
                     )
+                    if self.callbacks.should_abort_upload():
+                        return "aborted"
                 progress = new_progress
 
             # raise an exception if the checksums do not match
