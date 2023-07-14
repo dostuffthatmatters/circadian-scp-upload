@@ -72,20 +72,22 @@ with circadian_scp_upload.RemoteConnection(
 ) as remote_connection:
 
     # upload a directory full of directories "YYYYMMDD/"
-    circadian_scp_upload.DailyDirectoryTransferClient(
+    circadian_scp_upload.DailyTransferClient(
         remote_connection=remote_connection,
         src_path="/path/to/data-directory-1",
         dst_path="/path/to/remote/data-directory-1",
         remove_files_after_upload=True,
+        variant="directories",
         callbacks=upload_client_callbacks,
     ).run()
 
     # upload a directory full of files "YYYYMMDD.txt"
-    circadian_scp_upload.DailyFileTransferClient(
+    circadian_scp_upload.DailyTransferClient(
         remote_connection=remote_connection,
         src_path="/path/to/data-directory-2",
         dst_path="/path/to/remote/data-directory-2",
         remove_files_after_upload=True,
+        variant="files",
         callbacks=upload_client_callbacks,
     ).run()
 ```
