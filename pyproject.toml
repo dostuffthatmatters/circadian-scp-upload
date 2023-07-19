@@ -11,6 +11,7 @@ python = "^3.9"
 fabric = "^3.1.0"
 pydantic = "^2.0.2"
 filelock = "^3.12.2"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.4.1"

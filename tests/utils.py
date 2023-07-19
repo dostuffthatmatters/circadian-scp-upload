@@ -2,6 +2,21 @@ import os
 import random
 import time
 from typing import Literal
+import dotenv
+
+
+def load_credentials() -> tuple[str, str, str]:
+    dotenv.load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+    TEST_SERVER_HOST = os.getenv("TEST_SERVER_HOST")
+    assert isinstance(TEST_SERVER_HOST, str)
+
+    TEST_SERVER_USERNAME = os.getenv("TEST_SERVER_USERNAME")
+    assert isinstance(TEST_SERVER_USERNAME, str)
+
+    TEST_SERVER_PASSWORD = os.getenv("TEST_SERVER_PASSWORD")
+    assert isinstance(TEST_SERVER_PASSWORD, str)
+
+    return TEST_SERVER_HOST, TEST_SERVER_USERNAME, TEST_SERVER_PASSWORD
 
 
 def generate_tmp_directory_path() -> str:

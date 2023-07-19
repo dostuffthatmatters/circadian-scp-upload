@@ -21,9 +21,8 @@ def test_directory_upload(
 ) -> None:
     tmp_dir_path, dummy_files = provide_test_directory
 
-    # TODO: get server credentials from env file
     with circadian_scp_upload.RemoteConnection(
-        "1.2.3.4", "someusername", "somepassword"
+        *utils.load_credentials()
     ) as remote_connection:
         # TODO: assert that remote dir does not exist
 
