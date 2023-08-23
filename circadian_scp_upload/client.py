@@ -79,13 +79,9 @@ class DailyTransferClient:
             raise Exception("python3.10 is not installed on the server")
 
         try:
-            remote_command = (
-                f'python3.10 {remote_script_path} "{remote_dir_path}" "{file_regex}"'
-            )
+            remote_command = f'python3.10 {remote_script_path} --file_regex "{file_regex}" "{remote_dir_path}"'
             a: invoke.runners.Result = self.remote_connection.connection.run(
-                f'python3.10 {remote_script_path} "{remote_dir_path}" "{file_regex}"',
-                hide=True,
-                in_stream=False,
+                remote_command, hide=True, in_stream=False
             )
             assert a.exited == 0
             remote_checksum = a.stdout.strip()
@@ -120,14 +116,19 @@ class DailyTransferClient:
         raw_src_files = os.listdir(os.path.join(self.src_path, date_string))
         files_found_in_src = set([f for f in raw_src_files if re.match(file_regex, f)])
 
+        # quit if no src files are found
+        if len(files_found_in_src) == 0:
+            self.callbacks.log_info(f"{date_string}: no files found in src")
+            return "successful"
+
         # determine file differences between src and dst
         files_missing_in_dst = files_found_in_src.difference(set(meta.uploaded_files))
         self.callbacks.log_info(
             f"{date_string}: {len(files_missing_in_dst)} files missing in dst"
         )
 
-        if len(files_missing_in_dst) > 0:
-            self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
+        self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
+        print(f"created remote directory at {dst_dir_path}")
 
         with circadian_scp_upload.utils.TwinFileLock(
             src_dir_path, dst_dir_path, self.remote_connection.connection

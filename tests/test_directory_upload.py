@@ -13,7 +13,7 @@ def provide_test_directory() -> (
     tmp_dir_path, dummy_files = utils.provide_test_directory("directories")
     yield tmp_dir_path, dummy_files
     if os.path.exists(tmp_dir_path):
-        shutil.rmtree(tmp_dir_path)
+        pass  # shutil.rmtree(tmp_dir_path)
 
 
 def test_directory_upload(

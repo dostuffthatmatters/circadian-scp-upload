@@ -39,10 +39,9 @@ if __name__ == "__main__":
         "path",
         type=str,
         help="path to directory or file",
-        required=True,
     )
     parser.add_argument(
-        "file_regex",
+        "--file_regex",
         type=str,
         help="regex to match files",
         required=False,

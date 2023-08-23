@@ -1,7 +1,7 @@
 import os
 import random
 import time
-from typing import Literal
+from typing import Callable, Literal
 import dotenv
 
 
@@ -22,7 +22,9 @@ def load_credentials() -> tuple[str, str, str]:
 def generate_tmp_directory_path() -> str:
     """Generate a path to a temporary directory that does not exist yet."""
     current_timestamp = int(time.time())
-    current_filepath = lambda: f"/tmp/circadian_scp_upload_test_{current_timestamp}"
+    current_filepath: Callable[
+        [], str
+    ] = lambda: f"/tmp/circadian_scp_upload_test_{current_timestamp}"
     while os.path.exists(current_filepath()):
         current_timestamp += 1
     return current_filepath()
@@ -31,7 +33,7 @@ def generate_tmp_directory_path() -> str:
 def generate_random_string(n: int = 20) -> str:
     """Generate a random string consisting of lowercase letters."""
     letters = [chr(i) for i in range(ord("a"), ord("z") + 1)]
-    return "".join([random.choice(letters) for i in range(5)])
+    return "".join([random.choice(letters) for i in range(n)])
 
 
 def generate_dummy_date_strings(n: int = 10) -> list[str]:
@@ -39,8 +41,8 @@ def generate_dummy_date_strings(n: int = 10) -> list[str]:
     output: list[str] = []
     for _ in range(n):
         year = random.choice(range(2000, 2030))
-        month = random.choice(range(1, 12))
-        day = random.choice(range(1, 29))
+        month = str(random.choice(range(1, 12))).zfill(2)
+        day = str(random.choice(range(1, 29))).zfill(2)
         output.append(f"{year}{month}{day}")
     return output
 
@@ -76,7 +78,7 @@ def provide_test_directory(
         date_dir_path = tmp_dir_path
         if variant == "directories":
             date_dir_path = os.path.join(tmp_dir_path, date_string)
-        os.makedirs(tmp_dir_path, exist_ok=True)
+        os.makedirs(date_dir_path, exist_ok=True)
 
         for filename, content in files.items():
             with open(os.path.join(date_dir_path, filename), "w") as f:
