@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 import fabric.connection
 import fabric.transfer
 import os
@@ -128,7 +128,19 @@ class DailyTransferClient:
         )
 
         self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
-        print(f"created remote directory at {dst_dir_path}")
+        self.callbacks.log_info(
+            f"{date_string}: created remote directory at {dst_dir_path}"
+        )
+
+        filecount_width = len(str(len(files_found_in_src)))
+        print_progress: Callable[
+            [float], None
+        ] = lambda fraction: self.callbacks.log_info(
+            f"{date_string}: {fraction * 100:6.2f} % "
+            + f"({len(meta.uploaded_files):{filecount_width}d}/{len(files_found_in_src)})"
+            + f" uploaded"
+            + (" (finished)" if fraction == 1 else "")
+        )
 
         with circadian_scp_upload.utils.TwinFileLock(
             src_dir_path, dst_dir_path, self.remote_connection.connection
@@ -151,21 +163,19 @@ class DailyTransferClient:
                 meta.dump()
                 new_progress = len(meta.uploaded_files) / len(files_found_in_src)
                 if int(new_progress * 10) != int(progress * 10):
-                    self.callbacks.log_info(
-                        f"{date_string}: {progress * 100:.2f}% "
-                        + f"({len(meta.uploaded_files)}/{len(files_found_in_src)})"
-                        + f" uploaded"
-                    )
+                    print_progress(progress)
                     if self.callbacks.should_abort_upload():
                         return "aborted"
                 progress = new_progress
+
+            print_progress(1.0)
 
             # raise an exception if the checksums do not match
             if not self.__directory_checksums_match(date_string):
                 self.callbacks.log_error(f"{date_string}: checksums do not match")
                 return "failed"
-
-            self.callbacks.log_info(f"{date_string}: finished uploading")
+            else:
+                self.callbacks.log_info(f"{date_string}: checksums match")
 
         # only remove src if configured and checksums match
         if self.remove_files_after_upload:
