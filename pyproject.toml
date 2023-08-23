@@ -4,10 +4,10 @@ version = "0.1.0"
 description = ""
 authors = ["Moritz Makowski <moritz@dostuffthatmatters.dev>"]
 readme = "README.md"
-packages = [{include = "circadian_scp_upload"}]
+packages = [{ include = "circadian_scp_upload" }]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 fabric = "^3.1.0"
 pydantic = "^2.0.2"
 filelock = "^3.12.2"
@@ -28,7 +28,7 @@ no_warn_unused_ignores = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["fabric.*"]
+module = ["fabric.*", "dotenv"]
 ignore_missing_imports = true
 
 [build-system]

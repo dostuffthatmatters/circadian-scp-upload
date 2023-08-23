@@ -31,3 +31,6 @@ def test_static_types(provide_main_template_file: None) -> None:
 
     assert os.system("rm -rf .mypy_cache/3.*/main_template.*") == 0
     assert os.system(f"mypy {PY_FILE_PATH}") == 0
+
+    assert os.system("rm -rf .mypy_cache/3.*/tests") == 0
+    assert os.system("mypy tests/") == 0
