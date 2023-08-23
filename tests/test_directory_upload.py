@@ -24,7 +24,9 @@ def test_directory_upload(
     with circadian_scp_upload.RemoteConnection(
         *utils.load_credentials()
     ) as remote_connection:
-        # TODO: assert that remote dir does not exist
+        assert not remote_connection.transfer_process.is_remote_dir(tmp_dir_path)
+        remote_connection.connection.run(f"mkdir -p {tmp_dir_path}")
+        assert remote_connection.transfer_process.is_remote_dir(tmp_dir_path)
 
         circadian_scp_upload.DailyTransferClient(
             remote_connection=remote_connection,
