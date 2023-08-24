@@ -1,3 +1,4 @@
+import datetime
 import os
 import random
 import time
@@ -36,15 +37,25 @@ def generate_random_string(n: int = 20) -> str:
     return "".join([random.choice(letters) for i in range(n)])
 
 
-def generate_dummy_date_strings(n: int = 10) -> list[str]:
+def generate_dummy_date_strings() -> list[str]:
     """Generate a list of dummy date strings (YYYYMMDD)."""
-    output: list[str] = []
-    for _ in range(n):
-        year = random.choice(range(2000, 2030))
-        month = str(random.choice(range(1, 12))).zfill(2)
-        day = str(random.choice(range(1, 29))).zfill(2)
-        output.append(f"{year}{month}{day}")
-    return output
+    current_time = datetime.datetime.now()
+
+    # the 7 days centered around today
+    dates: list[datetime.date] = [
+        (current_time + datetime.timedelta(days=delta)).date() for delta in range(-3, 4)
+    ]
+
+    # 4 random dates from the past 50 years, 4 from the future 50 years
+    for i in range(8):
+        dates.append(
+            current_time
+            + datetime.timedelta(
+                days=(random.choice(range(4, 365 * 50)) * (-1 if i < 4 else 1))
+            )
+        )
+
+    return [d.strftime("%Y%m%d") for d in dates]
 
 
 def generate_dummy_files(date_string: str, n: int = 5) -> dict[str, str]:
