@@ -13,7 +13,7 @@ def provide_test_directory() -> (
 ):
     tmp_dir_path, dummy_files = utils.provide_test_directory("files")
     yield tmp_dir_path, dummy_files
-    # os.system("rm -rf /tmp/circadian_scp_upload_test_*")
+    os.system("rm -rf /tmp/circadian_scp_upload_test_*")
 
 
 def _check_directory_state(

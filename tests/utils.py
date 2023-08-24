@@ -72,8 +72,8 @@ def generate_dummy_files(date_string: str, n: int = 5) -> dict[str, str]:
     ```"""
     output: dict[str, str] = {}
     for _ in range(n):
-        prefix = random.choice(["", "ma", "mb", "file-"])
-        suffix = random.choice(["", ".txt", "0001", "-0001.txt", "-0002", "0002.txt"])
+        prefix = random.choice(["", "ma", "mb", "file-", "01-", "20-", "1900-"])
+        suffix = random.choice(["", ".txt", "_0001", "-0001.txt", "-0002", "_0002.txt"])
         output[f"{prefix}{date_string}{suffix}"] = generate_random_string()
     return output
 
