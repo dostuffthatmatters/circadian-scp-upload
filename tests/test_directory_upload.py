@@ -1,19 +1,10 @@
+import datetime
+import json
 import os
-import shutil
-from typing import Generator, Literal
+from typing import Generator
 import pytest
 import circadian_scp_upload
 from . import utils
-
-
-"""
-NEXT STEPS:
-
-* future dates will still be present locally
-* future dates will not be present remotely
-* check whether all lock files have been removed
-
-"""
 
 
 @pytest.fixture
@@ -22,37 +13,88 @@ def provide_test_directory() -> (
 ):
     tmp_dir_path, dummy_files = utils.provide_test_directory("directories")
     yield tmp_dir_path, dummy_files
-    if os.path.exists(tmp_dir_path):
-        # shutil.rmtree(tmp_dir_path)
-        pass
+    os.system("rm -rf /tmp/circadian_scp_upload_test_*")
 
 
 def _check_directory_state(
     path: str,
     dummy_files: dict[str, dict[str, str]],
-    state: Literal["empty", "complete"],
+    past_dates_should_exist: bool,
+    future_dates_should_exist: bool,
 ) -> None:
     assert os.path.isdir(path)
-    for date_string in dummy_files.keys():
-        if state == "empty":
-            assert not os.path.exists(os.path.join(path, date_string))
-        else:
-            assert os.path.isdir(os.path.join(path, date_string))
+
+    latest_datetime_to_consider = datetime.datetime.now() - datetime.timedelta(days=1)
+    if latest_datetime_to_consider.hour == 0:
+        latest_datetime_to_consider -= datetime.timedelta(days=1)
+    latest_date_string_to_consider = latest_datetime_to_consider.date().strftime(
+        "%Y%m%d"
+    )
+
+    wrongly_existing_directories: list[str] = []
+    wrongly_existing_files: list[str] = []
+    wrongly_missing_directories: list[str] = []
+    wrongly_missing_files: list[str] = []
+
+    for date_string in sorted(dummy_files.keys()):
+        directory_should_exist = (
+            past_dates_should_exist
+            if (date_string <= latest_date_string_to_consider)
+            else future_dates_should_exist
+        )
+
+        if directory_should_exist:
+            if not os.path.isdir(os.path.join(path, date_string)):
+                wrongly_missing_directories.append(os.path.join(path, date_string))
+            if os.path.isfile(os.path.join(path, date_string, ".do-not-touch")):
+                wrongly_existing_files.append(
+                    os.path.join(path, date_string, ".do-not-touch")
+                )
             for file_name, file_contents in dummy_files[date_string].items():
-                assert os.path.isfile(os.path.join(path, date_string, file_name))
-                with open(os.path.join(path, date_string, file_name), "r") as f:
-                    assert f.read() == file_contents
+                if not os.path.isfile(os.path.join(path, date_string, file_name)):
+                    wrongly_missing_files.append(
+                        os.path.join(path, date_string, file_name)
+                    )
+                else:
+                    with open(os.path.join(path, date_string, file_name), "r") as f:
+                        assert f.read() == file_contents
+        else:
+            if os.path.isdir(os.path.join(path, date_string)):
+                wrongly_existing_directories.append(os.path.join(path, date_string))
+
+    for check_list, check_message in [
+        (wrongly_existing_directories, "The following directories should not exist"),
+        (wrongly_existing_files, "The following files should not exist"),
+        (wrongly_missing_directories, "The following directories should exist"),
+        (wrongly_missing_files, "The following files should exist"),
+    ]:
+        assert len(check_list) == 0, (
+            check_message + ": [\n" + ",\n".join(check_list) + "\n]"
+        )
 
 
 def test_directory_upload(
     provide_test_directory: tuple[str, dict[str, dict[str, str]]]
 ) -> None:
+    current_time = datetime.datetime.now()
+    if current_time.hour == 0 and current_time.minute > 58:
+        raise RuntimeError(
+            "Test cannot be started between 00:58 and 01:00, because it might "
+            + "interfere with which directories are considered during the upload"
+        )
+
     tmp_dir_path, dummy_files = provide_test_directory
 
     print("tmp_dir_path =", tmp_dir_path)
-    print("dummy_files =", dummy_files)
+    print("dummy_files =", json.dumps(dummy_files, indent=4))
 
-    _check_directory_state(tmp_dir_path, dummy_files, "complete")
+    # check integrity of local directory
+    _check_directory_state(
+        tmp_dir_path,
+        dummy_files,
+        past_dates_should_exist=True,
+        future_dates_should_exist=True,
+    )
 
     with circadian_scp_upload.RemoteConnection(
         *utils.load_credentials()
@@ -61,6 +103,7 @@ def test_directory_upload(
         remote_connection.connection.run(f"mkdir -p {tmp_dir_path}")
         assert remote_connection.transfer_process.is_remote_dir(tmp_dir_path)
 
+        # perform upload
         circadian_scp_upload.DailyTransferClient(
             remote_connection=remote_connection,
             src_path=tmp_dir_path,
@@ -69,14 +112,30 @@ def test_directory_upload(
             variant="directories",
         ).run()
 
-        _check_directory_state(tmp_dir_path, dummy_files, "empty")
+        # check integrity of local directory
+        _check_directory_state(
+            tmp_dir_path,
+            dummy_files,
+            past_dates_should_exist=False,
+            future_dates_should_exist=True,
+        )
 
-        os.rmdir(tmp_dir_path)
+        # move old local directory and download remote directory
+        os.rename(tmp_dir_path, tmp_dir_path + "-old-local")
+        tmp_dir_name = tmp_dir_path.split("/")[-1]
+        remote_connection.connection.run(
+            f"cd /tmp && tar -cf {tmp_dir_name}.tar {tmp_dir_name}"
+        )
+        remote_connection.transfer_process.get(
+            tmp_dir_path + ".tar", tmp_dir_path + ".tar"
+        )
+        remote_connection.connection.run("rm -rf /tmp/circadian_scp_upload_test_*")
+        os.system(f"cd /tmp && tar -xf {tmp_dir_name}.tar")
 
-        # download remote directory and check completeness
-        remote_connection.transfer_process.get(tmp_dir_path, tmp_dir_path)
-        _check_directory_state(tmp_dir_path, dummy_files, "complete")
-
-        # TODO: assert that remote lock file does not exist
-
-        remote_connection.connection.run(f"rm -rf {tmp_dir_path}")
+        # check integrity of remote directory (downloaded to local)
+        _check_directory_state(
+            tmp_dir_path,
+            dummy_files,
+            past_dates_should_exist=True,
+            future_dates_should_exist=False,
+        )
