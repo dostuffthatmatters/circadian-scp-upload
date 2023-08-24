@@ -40,6 +40,7 @@ def get_src_date_strings(
             )
 
     output: list[str] = []
+    invalid_filenames: list[str] = []
     for filename in os.listdir(src_path):
         filepath = os.path.join(src_path, filename)
         try:
@@ -48,14 +49,28 @@ def get_src_date_strings(
                 assert _is_valid_date_string(filename)
                 output.append(filename)
             else:
-                date_string_matches = re.findall(r"^.*(2\d{7}).*$", filename)
-                assert len(date_string_matches) == 1
-                assert isinstance(date_string_matches[0], str)
-                assert _is_valid_date_string(date_string_matches[0])
-                output.append(date_string_matches[0])
+                invalid_filenames = re.findall(r"(\d{9})", filename)
+                if len(invalid_filenames) > 0:
+                    invalid_filenames.append(filename)
+
+                date_string_matches = re.findall(r"(\d{8})", filename)
+                assert isinstance(date_string_matches, list)
+                if len(date_string_matches) > 1:
+                    invalid_filenames.append(filename)
+                for m in date_string_matches:
+                    assert isinstance(m, str)
+                    if _is_valid_date_string(m):
+                        output.append(m)
         except AssertionError:
             pass
 
+    if len(invalid_filenames) > 0:
+        raise Exception(
+            "The following filenames are invalid due to having 9 or more "
+            + "succeeding digits or two or more blocks of 8 succeeding "
+            + "digits in their name- due to this it, their date of "
+            + f"generation cannot be determined: {invalid_filenames}"
+        )
     return list(set(output))
 
 
@@ -139,3 +154,4 @@ class TwinFileLock:
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         self.remote_connection.run(f"rm -r {self.dst_filepath}")
         self.src_filelock.release()
+        os.remove(self.src_filepath)

@@ -66,7 +66,7 @@ class DailyTransferClient:
             os.path.dirname(os.path.abspath(__file__)), "checksum.py"
         )
         remote_dir_path = f"{self.dst_path}/{date_string}"
-        remote_script_path = f"{remote_dir_path}/checksum.py"
+        remote_script_path = f"{self.dst_path}/checksum.py"
         self.remote_connection.transfer_process.put(
             local_script_path, remote_script_path
         )
