@@ -9,6 +9,33 @@ import filelock
 import fabric.connection
 
 
+def filename_is_ambiguous_for_dated_regex(regex: str, filename: str) -> bool:
+    """Returns true if the filename matches the dated regex more than once.
+
+    This happens when this filename could have been produced on more than one
+    date with respect to the dated regex. For example, if the dated regex is
+    `^.*%y-%m-%d.*$`, the filename `log-20-11-11-11.txt` is ambiguous because
+    it could have been produced on 2011-11-11 or 2020-11-11."""
+
+    substrings = (
+        [filename[0:i] for i in range(1, len(filename))]
+        + [filename[i:] for i in range(1, len(filename))]
+        + [filename]
+    )
+    trimmed_regex = regex[regex.index("(") : regex.rindex(")") + 1]
+    trimmed_regex = trimmed_regex.replace("(", "").replace(")", "")
+
+    matches: list[str] = []
+
+    for substring in substrings:
+        new_matches = re.findall(trimmed_regex, substring)
+        assert isinstance(new_matches, list)
+        assert all(isinstance(m, str) for m in new_matches)
+        matches += new_matches
+
+    return len(set(matches)) > 1
+
+
 def file_or_dir_name_to_date(
     file_or_dir_name: str,
     dated_regex: str,
@@ -32,19 +59,25 @@ def file_or_dir_name_to_date(
     else:
         keys = list(sorted(["%Y", "%m", "%d"], key=lambda x: dated_regex.index(x)))
 
+    regex = dated_regex
     for old, new in {
         "%Y": r"(\d{4})",
         "%y": r"(\d{2})",
         "%m": r"(\d{2})",
         "%d": r"(\d{2})",
     }.items():
-        dated_regex = dated_regex.replace(old, new)
+        regex = regex.replace(old, new)
 
-    matches = re.findall(dated_regex, file_or_dir_name)
+    if filename_is_ambiguous_for_dated_regex(regex, file_or_dir_name):
+        raise ValueError(
+            f"string `{file_or_dir_name}` matches multiple dates for dated regex "
+            + f"`{dated_regex}`"
+        )
+
+    matches = re.findall(regex, file_or_dir_name)
     if len(matches) == 0:
         return None
-    if len(matches) > 1:
-        raise Exception(f"string `{file_or_dir_name}` matches multiple dates")
+    assert len(matches) == 1
     match = matches[0]
     assert isinstance(match, tuple)
     assert len(match) == 3
