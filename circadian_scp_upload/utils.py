@@ -98,16 +98,50 @@ class UploadMeta(pydantic.BaseModel):
 class UploadClientCallbacks(pydantic.BaseModel):
     """A collection of callbacks passed to the upload client."""
 
-    date_string_to_file_regex: Callable[[str], str] = pydantic.Field(
-        default=(lambda date_string: r"^([^\.].*)?" + date_string + r".*$"),
+    dated_directory_regex: str = pydantic.Field(
+        default=r"^[\.].*" + "%Y%m%d" + r".*$",
         description=(
-            "A function that takes a `date string` and returns a regex "
-            + "string. For every `date_string`, the upload client finds, "
-            + "only consider the files that match this regex string. "
-            + "The default regex string will match any file that does "
-            + "not start with a dot and contains the `date_string`."
+            "Which directories to consider in the upload process. The "
+            + "patterns `%Y`/`%y`/`%m`/`%d` represent the date at which "
+            + "the file was generated. Any string containing some pattern "
+            + "except for these four will raise an exception. "
+            + "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit "
+            + "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
         ),
     )
+    dated_file_regex: str = pydantic.Field(
+        default=r"^[\.].*" + "%Y%m%d" + r".*$",
+        description=(
+            "Which files to consider in the upload process. The patterns "
+            + "`%Y`/`%y`/`%m`/`%d` represent the date at which the file "
+            + "was generated. Any string containing some pattern except "
+            + "for these four will raise an exception."
+            + "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit "
+            + "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
+        ),
+    )
+
+    @pydantic.field_validator(
+        "dated_directory_regex",
+        "dated_file_regex",
+        mode="before",
+    )
+    @classmethod
+    def _validate_dated_regex(cls, v: str) -> str:
+        checks: list[tuple[bool, str]] = [
+            (("%Y" in v) or ("%y" in v), "string must contain `%Y` or `%y`"),
+            (("%m" in v) and ("%d" in v), "string must contain `%m` and `%d`"),
+            (v.count("%") == 3, "string must contain exactly 3 `%` characters"),
+            ("(" not in v, "string must not contain `(`"),
+            (")" not in v, "string must not contain `)`"),
+            (v.startswith("^"), "string must start with `^`"),
+            (v.endswith("$"), "string must end with `$`"),
+        ]
+        error_message = "; ".join([m for (c, m) in checks if not c])
+        if len(error_message) > 0:
+            raise ValueError(f"value `{repr(v)}` is invalid: {error_message}")
+        return v
+
     log_info: Callable[[str], None] = pydantic.Field(
         default=(lambda msg: print(f"INFO - {msg}")),
         description="Function to be called when logging a message or type INFO.",
