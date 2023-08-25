@@ -59,7 +59,7 @@ def test_file_or_dir_name_to_date_timing() -> None:
     now = datetime.datetime.now()
     latest_date = (
         (now - datetime.timedelta(days=1))
-        if (now.hour > 1)
+        if (now.hour > 0)
         else (now - datetime.timedelta(days=2))
     ).date()
 

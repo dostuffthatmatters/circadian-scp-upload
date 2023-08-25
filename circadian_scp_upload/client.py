@@ -158,7 +158,7 @@ class DailyTransferClient:
         log_progress: Callable[[float], None] = lambda fraction: log_info(
             f"{int(fraction * 100):3d} % "
             + f"({len(meta.uploaded_files):{max_file_count_characters}d}/{len(src_files)})"
-            + f" uploaded {' (finished)' if fraction == 1 else ''}"
+            + f" uploaded {'(finished)' if fraction == 1 else ''}"
         )
 
         # locking the directory both locally and remote
@@ -251,6 +251,8 @@ class DailyTransferClient:
     def run(self) -> None:
         self.block_if_process_is_already_running()
 
+        log_info = self.callbacks.log_info
+
         dated_regex = (
             self.callbacks.dated_directory_regex
             if self.variant == "directories"
@@ -259,43 +261,24 @@ class DailyTransferClient:
         src_dates = circadian_scp_upload.utils.get_src_date_strings(
             self.src_path, self.variant, dated_regex
         )
-        self.callbacks.log_info(
+        log_info(
             f"Searching for dates in {self.src_path} using the regex {dated_regex}"
         )
-        self.callbacks.log_info(f"Found {len(src_dates)} date(s): {src_dates}")
-
-        now = datetime.datetime.now()
-        latest_date_to_be_uploaded = (
-            (now - datetime.timedelta(days=1))
-            if (now.hour > 1)
-            else (now - datetime.timedelta(days=2))
-        ).date()
-        not_considered_dates = [
-            d for d in src_dates.keys() if d > latest_date_to_be_uploaded
-        ]
-        self.callbacks.log_info(
-            f"Not considering {len(not_considered_dates)} date(s) because "
-            + f"they are too recent: {not_considered_dates}"
-        )
+        log_info(f"Found {len(src_dates)} date(s) to be uploaded: {src_dates}")
 
         for date, paths in src_dates.items():
-            if date in not_considered_dates:
-                continue
-
             if self.variant == "directories":
-                self.callbacks.log_info(
-                    f"{date}: found {len(paths)} paths for this date: {paths}"
-                )
+                log_info(f"{date}: found {len(paths)} paths for this date: {paths}")
                 for path in paths:
-                    result = self.__upload_date_directory(date, path)
-                    self.callbacks.log_info(f"{date}: done ({result})")
+                    result = self.__upload_date_directory(date, os.path.basename(path))
+                    log_info(f"{date}: done ({result})")
                     if result == "aborted":
                         break
 
             elif self.variant == "files":
                 result = self.__upload_date_files(date)
-                self.callbacks.log_info(f"{date}: done ({result})")
+                log_info(f"{date}: done ({result})")
 
             if self.callbacks.should_abort_upload():
-                self.callbacks.log_info("Aborting upload")
+                log_info("Aborting upload")
                 break

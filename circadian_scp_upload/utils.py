@@ -50,7 +50,7 @@ def file_or_dir_name_to_date(
     now = datetime.datetime.now()
     latest_date = (
         (now - datetime.timedelta(days=1))
-        if (now.hour > 1)
+        if (now.hour > 0)
         else (now - datetime.timedelta(days=2))
     ).date()
 
@@ -69,10 +69,7 @@ def file_or_dir_name_to_date(
         regex = regex.replace(old, new)
 
     if filename_is_ambiguous_for_dated_regex(regex, file_or_dir_name):
-        raise ValueError(
-            f"string `{file_or_dir_name}` matches multiple dates for dated regex "
-            + f"`{dated_regex}`"
-        )
+        raise ValueError()
 
     matches = re.findall(regex, file_or_dir_name)
     if len(matches) == 0:
@@ -95,7 +92,7 @@ def get_src_date_strings(
     variant: Literal["directories", "files"],
     dated_regex: str,
 ) -> dict[datetime.date, list[str]]:
-    dates: dict[datetime.date, list[str]]
+    dates: dict[datetime.date, list[str]] = {}
 
     if not os.path.isdir(src_path):
         raise Exception(f'path "{src_path}" is not a directory')
@@ -169,7 +166,7 @@ class UploadClientCallbacks(pydantic.BaseModel):
     """A collection of callbacks passed to the upload client."""
 
     dated_directory_regex: str = pydantic.Field(
-        default=r"^[\.].*" + "%Y%m%d" + r".*$",
+        default=r"^.*" + "%Y%m%d" + r".*$",
         description=(
             "Which directories to consider in the upload process. The "
             + "patterns `%Y`/`%y`/`%m`/`%d` represent the date at which "
@@ -180,7 +177,7 @@ class UploadClientCallbacks(pydantic.BaseModel):
         ),
     )
     dated_file_regex: str = pydantic.Field(
-        default=r"^[\.].*" + "%Y%m%d" + r".*$",
+        default=r"^.*" + "%Y%m%d" + r".*$",
         description=(
             "Which files to consider in the upload process. The patterns "
             + "`%Y`/`%y`/`%m`/`%d` represent the date at which the file "
