@@ -36,6 +36,7 @@ This tool can sync the local data to a remote server via SCP for these two direc
 - It is resumable, meaning if the upload is interrupted, it will continue where it left off
 - It is interruptible without running it in a separate thread (`should_abort_upload` callback)
 - After a file or a directory has been uploaded, this tool will compute the checksum of the respective file(s) and delete the local file(s) only if the checksums match and if specified by the user
+- You can specify how dated directories or files are formatted with regexes and `%Y`/`%m`/... expressions (see below)
 
 <br/>
 
