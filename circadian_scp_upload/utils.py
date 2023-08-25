@@ -2,67 +2,104 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Optional
 import datetime
 import pydantic
-import glob
 import filelock
 import fabric.connection
 
 
-def _is_valid_date_string(date_string: str) -> bool:
+def file_or_dir_name_to_date(
+    file_or_dir_name: str,
+    dated_regex: str,
+) -> Optional[datetime.date]:
+    """Converts a string to a date based on a dated regex.
+
+    Sample input for `string`: "2021-01-01"
+    Sample input for `dated_regex`: "%Y-%m-%d" """
+
+    # only consider dates after at least 1
+    # hour of the following day has passed
+    now = datetime.datetime.now()
+    latest_date = (
+        (now - datetime.timedelta(days=1))
+        if (now.hour > 1)
+        else (now - datetime.timedelta(days=2))
+    ).date()
+
+    if "%y" in dated_regex:
+        keys = list(sorted(["%y", "%m", "%d"], key=lambda x: dated_regex.index(x)))
+    else:
+        keys = list(sorted(["%Y", "%m", "%d"], key=lambda x: dated_regex.index(x)))
+
+    for old, new in {
+        "%Y": r"(\d{4})",
+        "%y": r"(\d{2})",
+        "%m": r"(\d{2})",
+        "%d": r"(\d{2})",
+    }.items():
+        dated_regex = dated_regex.replace(old, new)
+
+    matches = re.findall(dated_regex, file_or_dir_name)
+    if len(matches) == 0:
+        return None
+    if len(matches) > 1:
+        raise Exception(f"string `{file_or_dir_name}` matches multiple dates")
+    match = matches[0]
+    assert isinstance(match, tuple)
+    assert len(match) == 3
     try:
-        day_ending = datetime.datetime.strptime(
-            f"{date_string} 23:59:59", "%Y%m%d %H:%M:%S"
-        )
-        seconds_since_day_ending = (
-            datetime.datetime.now() - day_ending
-        ).total_seconds()
-        assert seconds_since_day_ending >= 3600
-        return True
-    except (ValueError, AssertionError):
-        return False
+        date = datetime.datetime.strptime(
+            f"{match[0]}-{match[1]}-{match[2]}", "-".join(keys)
+        ).date()
+        return date if (date <= latest_date) else None
+    except ValueError:
+        return None
 
 
 def get_src_date_strings(
-    src_path: str, variant: Literal["directories", "files"]
-) -> list[str]:
+    src_path: str,
+    variant: Literal["directories", "files"],
+    dated_regex: str,
+) -> dict[datetime.date, list[str]]:
+    dates: dict[datetime.date, list[str]]
+
     if not os.path.isdir(src_path):
         raise Exception(f'path "{src_path}" is not a directory')
 
-    output: list[str] = []
-    invalid_filenames: list[str] = []
-    for filename in os.listdir(src_path):
-        filepath = os.path.join(src_path, filename)
+    ambiguous_paths: list[str] = []
+
+    for file_or_dir_name in os.listdir(src_path):
+        file_or_dir_path = os.path.join(src_path, file_or_dir_name)
+
         try:
-            if variant == "directories":
-                assert os.path.isdir(filepath)
-                assert _is_valid_date_string(filename)
-                output.append(filename)
-            else:
-                invalid_filenames = re.findall(r"(\d{9})", filename)
-                if len(invalid_filenames) > 0:
-                    invalid_filenames.append(filename)
+            if any(
+                [
+                    (variant == "directories")
+                    and (not os.path.isdir(file_or_dir_path)),
+                    ((variant == "files") and (not os.path.isfile(file_or_dir_path))),
+                ]
+            ):
+                continue
+            date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
+            if date is None:
+                continue
+            if date not in dates:
+                dates[date] = []
+            dates[date].append(file_or_dir_path)
+        except ValueError:
+            ambiguous_paths.append(file_or_dir_path)
 
-                date_string_matches = re.findall(r"(\d{8})", filename)
-                assert isinstance(date_string_matches, list)
-                if len(date_string_matches) > 1:
-                    invalid_filenames.append(filename)
-                for m in date_string_matches:
-                    assert isinstance(m, str)
-                    if _is_valid_date_string(m):
-                        output.append(m)
-        except AssertionError:
-            pass
-
-    if len(invalid_filenames) > 0:
-        raise Exception(
-            "The following filenames are invalid due to having 9 or more "
-            + "succeeding digits or two or more blocks of 8 succeeding "
-            + "digits in their name- due to this it, their date of "
-            + f"generation cannot be determined: {invalid_filenames}"
+    if len(ambiguous_paths) > 0:
+        raise ValueError(
+            f"The following {variant} match the regex `{repr(dated_regex)}` but cannot be "
+            + f"parsed with parsed into a valid date because the result is ambiguous (can "
+            + "be produced on more than one date): [\n"
+            + ",\n".join(ambiguous_paths)
+            + "\n]"
         )
-    return list(set(output))
+
+    return dates
 
 
 class UploadMeta(pydantic.BaseModel):
