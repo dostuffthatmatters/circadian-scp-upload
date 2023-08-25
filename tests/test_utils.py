@@ -23,34 +23,51 @@ def test_file_or_dir_name_to_date_parsing() -> None:
 
 
 def test_file_or_dir_name_to_date_ambiguity() -> None:
-    dated_regex = "^%Y.*%m.*%d$"
-    good_string = "2022-03-04"
-    bad_string = "2022-03-04-05"
+    def _test(
+        dated_regex: str,
+        good_strings: list[str],
+        bad_strings: list[str],
+    ) -> None:
+        for good_string in good_strings:
+            assert file_or_dir_name_to_date(good_string, dated_regex) is not None
 
-    assert file_or_dir_name_to_date(good_string, dated_regex) == datetime.date(
-        2022, 3, 4
+        for bad_string in bad_strings:
+            try:
+                file_or_dir_name_to_date(bad_string, dated_regex)
+                assert False, "Should have raised a ValueError"
+            except ValueError:
+                pass
+
+    _test(
+        dated_regex="^%Y.*%m.*%d$",
+        good_strings=["2022-03-04"],
+        bad_strings=["2022-03-04-05", "2022-2021-04-05"],
     )
-
-    try:
-        file_or_dir_name_to_date(bad_string, dated_regex)
-        assert False, "Should have raised a ValueError"
-    except ValueError:
-        pass
+    _test(
+        dated_regex="^.*%Y%m%d.*$",
+        good_strings=["20220204"],
+        bad_strings=["202202041", "20220204-20220205"],
+    )
+    _test(
+        dated_regex="^.*%y-%m-%d*$",
+        good_strings=["2022-02-04"],
+        bad_strings=["10-11-12-13", "22-02-04_22-02-05"],
+    )
 
 
 def test_file_or_dir_name_to_date_timing() -> None:
     now = datetime.datetime.now()
-    latest_datetime = (
+    latest_date = (
         (now - datetime.timedelta(days=1))
         if (now.hour > 1)
         else (now - datetime.timedelta(days=2))
-    )
+    ).date()
 
     not_considered_dates = [
-        (latest_datetime + datetime.timedelta(days=n)).date() for n in range(1, 11)
+        (latest_date + datetime.timedelta(days=n)) for n in range(1, 11)
     ]
     considered_dates = [
-        (latest_datetime - datetime.timedelta(days=n)).date() for n in range(0, 10)
+        (latest_date - datetime.timedelta(days=n)) for n in range(0, 10)
     ]
     for date in not_considered_dates:
         assert file_or_dir_name_to_date(date.strftime("%Y-%m-%d"), "^%Y-%m-%d$") == None
