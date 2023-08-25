@@ -1,9 +1,11 @@
 from __future__ import annotations
+import glob
 from typing import Any, Callable, Literal
 import fabric.connection
 import fabric.transfer
 import os
 import shutil
+import filelock
 import invoke
 import re
 import circadian_scp_upload
@@ -215,7 +217,25 @@ class DailyTransferClient:
 
         return "successful"
 
+    def check_filelocks(self) -> None:
+        """Checks whether any filelock is locked in the source directory.
+        Raises an exception if this is the case because this would mean
+        that another upload process is currently running on that source
+        directory."""
+
+        for do_not_touch_filepath in glob.glob(
+            os.path.join(self.src_path, "**", ".do-not-touch"), recursive=True
+        ) + glob.glob(os.path.join(self.src_path, ".do-not-touch")):
+            if filelock.FileLock(do_not_touch_filepath).is_locked:
+                raise Exception(
+                    f"path is used by another upload process: "
+                    + f"filelock at {do_not_touch_filepath} is locked"
+                )
+
     def run(self) -> None:
+        # check whether another process is running
+        self.check_filelocks()
+
         src_date_strings = circadian_scp_upload.utils.get_src_date_strings(
             self.src_path, variant=self.variant
         )

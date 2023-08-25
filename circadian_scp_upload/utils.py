@@ -30,15 +30,6 @@ def get_src_date_strings(
     if not os.path.isdir(src_path):
         raise Exception(f'path "{src_path}" is not a directory')
 
-    for do_not_touch_filepath in glob.glob(
-        os.path.join(src_path, "**", ".do-not-touch"), recursive=True
-    ):
-        if filelock.FileLock(do_not_touch_filepath).is_locked:
-            raise Exception(
-                f"path is used by another upload process: "
-                + f"filelock at {do_not_touch_filepath} is locked"
-            )
-
     output: list[str] = []
     invalid_filenames: list[str] = []
     for filename in os.listdir(src_path):
