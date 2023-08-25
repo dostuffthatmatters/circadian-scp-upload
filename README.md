@@ -1,4 +1,4 @@
-# Daily SCP Sync
+# Circadian SCP Sync
 
 **Resumable, interruptible, SCP upload client for any files or directories generated day by day.**
 
@@ -6,7 +6,7 @@
 
 ## Use Case
 
-You have a local directory that generates data every day on you local machine. The directory looks like this:
+You have a local directory that generates data every day on your local machine. The directory looks like this:
 
 ```
 📁 data-directory-2
