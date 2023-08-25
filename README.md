@@ -51,18 +51,20 @@ import circadian_scp_upload
 # are the default values.
 
 upload_client_callbacks = circadian_scp_upload.UploadClientCallbacks(
-    # which files to consider in the upload process
-    # function from YYYYMMDD string to regex
-    date_string_to_file_regex=(
-        lambda date_string: r"^[\.].*" + date_string + r".*$"
-    ),
+    # which directories to consider in the upload process; only supports
+    # %Y/%y/%m/%d - does not support parentheses in the string
+    dated_directory_regex=r"^" + "%Y%m%d" + r"$",
 
-    # use your own logger
+    # which files to consider in the upload process; only supports
+    # %Y/%y/%m/%d - does not support parentheses in the string
+    dated_file_regex=r"^[\.].*" + "%Y%m%d" + r".*$",
+
+    # use your own logger instead of print statements
     log_info=lambda message: print(f"INFO - {message}"),
     log_error=lambda message: print(f"ERROR - {message}"),
 
-    # for example, we use this to make the upload stop, every time the
-    # parameters for uploading changed (upload active true/false, etc.)
+    # callback that is called periodically during the upload
+    # process to check if the upload should be aborted
     should_abort_upload=lambda: False,
 )
 
@@ -74,7 +76,7 @@ with circadian_scp_upload.RemoteConnection(
     # upload a directory full of directories "YYYYMMDD/"
     circadian_scp_upload.DailyTransferClient(
         remote_connection=remote_connection,
-        src_path="/path/to/data-directory-1",
+        src_path="/path/to/local/data-directory-1",
         dst_path="/path/to/remote/data-directory-1",
         remove_files_after_upload=True,
         variant="directories",
@@ -84,7 +86,7 @@ with circadian_scp_upload.RemoteConnection(
     # upload a directory full of files "YYYYMMDD.txt"
     circadian_scp_upload.DailyTransferClient(
         remote_connection=remote_connection,
-        src_path="/path/to/data-directory-2",
+        src_path="/path/to/local/data-directory-2",
         dst_path="/path/to/remote/data-directory-2",
         remove_files_after_upload=True,
         variant="files",
@@ -95,28 +97,28 @@ with circadian_scp_upload.RemoteConnection(
 You will get an informational output whereever you direct the log output to - the progress is only logged at steps of 10%:
 
 ```log
-INFO - 20150116: starting
-INFO - 20150116: 5 files missing in dst
-INFO - 20150116: created remote directory at /tmp/circadian_scp_upload_test_1692833117/20150116
-INFO - 20150116:   0.00 % (1/5) uploaded
-INFO - 20150116:  20.00 % (2/5) uploaded
-INFO - 20150116:  40.00 % (3/5) uploaded
-INFO - 20150116:  60.00 % (4/5) uploaded
-INFO - 20150116:  80.00 % (5/5) uploaded
-INFO - 20150116: 100.00 % (5/5) uploaded (finished)
-INFO - 20150116: checksums match
-INFO - 20150116: finished removing source
-INFO - 20150116: successful
-INFO - 20100325: starting
-INFO - 20100325: 5 files missing in dst
-INFO - 20100325: created remote directory at /tmp/circadian_scp_upload_test_1692833117/20100325
-INFO - 20100325:   0.00 % (1/5) uploaded
-INFO - 20100325:  20.00 % (2/5) uploaded
-INFO - 20100325:  40.00 % (3/5) uploaded
-INFO - 20100325:  60.00 % (4/5) uploaded
-INFO - 20100325:  80.00 % (5/5) uploaded
-INFO - 20100325: 100.00 % (5/5) uploaded (finished)
-INFO - 20100325: checksums match
-INFO - 20100325: finished removing source
-INFO - 20100325: successful
+INFO - 2015-01-16: starting
+INFO - 2015-01-16: 5 files missing in dst
+INFO - 2015-01-16: created remote directory at /tmp/circadian_scp_upload_test_1692833117/20150116
+INFO - 2015-01-16:   0.00 % (1/5) uploaded
+INFO - 2015-01-16:  20.00 % (2/5) uploaded
+INFO - 2015-01-16:  40.00 % (3/5) uploaded
+INFO - 2015-01-16:  60.00 % (4/5) uploaded
+INFO - 2015-01-16:  80.00 % (5/5) uploaded
+INFO - 2015-01-16: 100.00 % (5/5) uploaded (finished)
+INFO - 2015-01-16: checksums match
+INFO - 2015-01-16: finished removing source
+INFO - 2015-01-16: successful
+INFO - 2010-03-25: starting
+INFO - 2010-03-25: 5 files missing in dst
+INFO - 2010-03-25: created remote directory at /tmp/circadian_scp_upload_test_1692833117/20100325
+INFO - 2010-03-25:   0.00 % (1/5) uploaded
+INFO - 2010-03-25:  20.00 % (2/5) uploaded
+INFO - 2010-03-25:  40.00 % (3/5) uploaded
+INFO - 2010-03-25:  60.00 % (4/5) uploaded
+INFO - 2010-03-25:  80.00 % (5/5) uploaded
+INFO - 2010-03-25: 100.00 % (5/5) uploaded (finished)
+INFO - 2010-03-25: checksums match
+INFO - 2010-03-25: finished removing source
+INFO - 2010-03-25: successful
 ```
