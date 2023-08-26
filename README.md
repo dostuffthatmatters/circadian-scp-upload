@@ -9,21 +9,21 @@
 
 ## Use Case
 
-You have a local directory that generates data every day on your local machine. The directory looks like this:
+You have a local directory that generates daily data on your local machine. The directory looks like this:
 
 ```
 📁 data-directory-1
 ├── 📁 20190101
-│   ├── 📄 file1.txt
-│   ├── 📄 file2.txt
-│   └── 📄 file3.txt
+│   ├── 📄 file1.txt
+│   ├── 📄 file2.txt
+│   └── 📄 file3.txt
 └── 📁 20190102
-    ├── 📄 file1.txt
-    ├── 📄 file2.txt
-    └── 📄 file3.txt
+    ├── 📄 file1.txt
+    ├── 📄 file2.txt
+    └── 📄 file3.txt
 ```
 
-... or like this:
+Or like this:
 
 ```
 📁 data-directory-2
@@ -33,25 +33,25 @@ You have a local directory that generates data every day on your local machine. 
 └── 📄 20190103.txt
 ```
 
-... and you want to upload that data to a server, but only after the day of creation. Additionally, you want to mark the directories as "in-progress" on the remote server, so that the next processing steps will not touch unfinished days of data while uploading.
+You want to upload that data to a server, but only after the day of creation. Additionally, you want to mark the directories as "in progress" on the remote server so that subsequent processing steps will not touch unfinished days of data while uploading.
 
-This tool uses [SCP](https://en.wikipedia.org/wiki/Secure_copy_protocol) via the Python library [paramiko](https://github.com/paramiko/paramiko) to do that. It will write files named `.do-not-touch` in the local and remote directory during the upload process and deletes them afterwards.
+This tool uses [SCP](https://en.wikipedia.org/wiki/Secure_copy_protocol) via the Python library [paramiko](https://github.com/paramiko/paramiko) to do that. It will write files named `.do-not-touch` in the local and remote directories during the upload process and delete them afterward.
 
-Below, you can find a code snippet that defines a specific directory/file naming scheme (for example `%Y%m%d-(\.txt|\.csv)`). The tool uses this information to tell, when a specific file or directory has been generated. It will only upload files when at least one hour of the following day has passed.
+Below is a code snippet that defines a specific directory/file naming scheme (for example, `%Y%m%d-(\.txt|\.csv)`). The client uses this information to tell _when_ a specific file or directory was generated. It will only upload files when at least one hour of the following day has passed.
 
-**Can't I use `rsync` or a similiar CLI tool for that?**
+**Can't I use `rsync` or a similar CLI tool for that?**
 
-Yes, of course. However, the actual copying logic of individual files or directories is just 130 lines of code of this repository. The rest of this library is dedicated to it being a plug-and-play solution for your codebase: logging, regex filters, interruptibility, in-progress markers, etc..
+Yes, of course. However, the actual copying logic of individual files or directories is just 130 lines of code of this repository. The rest of this library is dedicated to being a plug-and-play solution for any Python codebase: logging, regex filters, being interruptable, in-progress markers, and so on.
 
-You should be able to `pip install`/`poetry add`/... and call a well documented upload client class instead of having to manually connect your codebase to rsync and do all of this pattern logic yourself.
+One should be able to `pip install`/`poetry add`/... and call a well-documented and typed upload client class instead of manually connecting each codebase to rsync and doing all the pattern and scheduling logic repeatedly.
 
-**How did you make sure, that the upload works correctly?**
+**How do you make sure that the upload works correctly?**
 
-First of all, the whole codebase has type hints and is strict checked with [Mypy](https://github.com/python/mypy) - even the snippet in the usage section below is tye checked with Mypy.
+First, the whole codebase has type hints and is strictly checked with [Mypy](https://github.com/python/mypy) - even the snippet in the usage section below is tye checked with Mypy.
 
-Secondly, the date patterning is tested extensively and the upload process of the files and directories is tested with an actual remote server by generating a bunch of sample files and directories and uploading them to that server. You can check out the output of the test runs in the [GitHub Actions](https://github.com/dostuffthatmatters/circadian-scp-upload/actions/workflows/test.yaml) of this repository - in the "Run pytests" step.
+Secondly, the date patterning is tested extensively, and the upload process of the files and directories is tested with an actual remote server by generating a bunch of sample files and directories and uploading them to that server. One can check out the output of the test runs in the [GitHub Actions](https://github.com/dostuffthatmatters/circadian-scp-upload/actions/workflows/test.yaml) of this repository - in the "Run pytests" step.
 
-Thirdly, after the upload, the checksum of the local and the remote directories/files is compared to make sure that the upload was successful. Only if those checksums match, the local files are deleted.
+Thirdly, after the upload, the checksum of the local and the remote directories/files is compared to ensure the upload was successful. Only if those checksums match will the client delete the local files. The file removal has to be actively enabled or disabled.
 
 <br/>
 
@@ -71,7 +71,7 @@ Configure and use the upload client:
 import circadian_scp_upload
 
 # Use the callbacks to customize the upload process
-# and integrate it into your own application. All callbacks
+# and integrate it into your own codebase. All callbacks
 # are optional and the callback object does not need to be
 # passed to the upload client. The lambda functions below
 # are the default values.
@@ -120,7 +120,7 @@ with circadian_scp_upload.RemoteConnection(
     ).run()
 ```
 
-You will get an informational output whereever you direct the log output to - the progress is only logged at steps of 10%:
+The client will produce an informational output wherever one directs the log output - the progress is only logged at steps of 10%:
 
 ```log
 INFO - 2015-01-16: starting
