@@ -123,28 +123,32 @@ with circadian_scp_upload.RemoteConnection(
 The client will produce an informational output wherever one directs the log output - the progress is only logged at steps of 10%:
 
 ```log
-INFO - 2015-01-16: starting
-INFO - 2015-01-16: 5 files missing in dst
-INFO - 2015-01-16: created remote directory at /tmp/circadian_scp_upload_test_1692833117/20150116
-INFO - 2015-01-16:   0.00 % (1/5) uploaded
-INFO - 2015-01-16:  20.00 % (2/5) uploaded
-INFO - 2015-01-16:  40.00 % (3/5) uploaded
-INFO - 2015-01-16:  60.00 % (4/5) uploaded
-INFO - 2015-01-16:  80.00 % (5/5) uploaded
-INFO - 2015-01-16: 100.00 % (5/5) uploaded (finished)
-INFO - 2015-01-16: checksums match
-INFO - 2015-01-16: finished removing source
-INFO - 2015-01-16: done (successful)
-INFO - 2010-03-25: starting
-INFO - 2010-03-25: 5 files missing in dst
-INFO - 2010-03-25: created remote directory at /tmp/circadian_scp_upload_test_1692833117/20100325
-INFO - 2010-03-25:   0.00 % (1/5) uploaded
-INFO - 2010-03-25:  20.00 % (2/5) uploaded
-INFO - 2010-03-25:  40.00 % (3/5) uploaded
-INFO - 2010-03-25:  60.00 % (4/5) uploaded
-INFO - 2010-03-25:  80.00 % (5/5) uploaded
-INFO - 2010-03-25: 100.00 % (5/5) uploaded (finished)
-INFO - 2010-03-25: checksums match
-INFO - 2010-03-25: finished removing source
-INFO - 2010-03-25: done (successful)
+INFO - 2005-06-20: found 1 paths for this date: ['/tmp/circadian_scp_upload_test_1693053096_3.10.12/20050620']
+INFO - 2005-06-20: starting to upload directory local directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20050620' to remote directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20050620'
+INFO - 2005-06-20: found 5 files in src directory
+INFO - 2005-06-20: 5 files missing in dst
+INFO - 2005-06-20: created remote directory
+INFO - 2005-06-20:   0 % (1/5) uploaded
+INFO - 2005-06-20:  20 % (2/5) uploaded
+INFO - 2005-06-20:  40 % (3/5) uploaded
+INFO - 2005-06-20:  60 % (4/5) uploaded
+INFO - 2005-06-20:  80 % (5/5) uploaded
+INFO - 2005-06-20: 100 % (5/5) uploaded (finished)
+INFO - 2005-06-20: checksums match
+INFO - 2005-06-20: finished removing source
+INFO - 2005-06-20: done (successful)
+INFO - 2023-08-23: found 1 paths for this date: ['/tmp/circadian_scp_upload_test_1693053096_3.10.12/20230823']
+INFO - 2023-08-23: starting to upload directory local directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20230823' to remote directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20230823'
+INFO - 2023-08-23: found 5 files in src directory
+INFO - 2023-08-23: 5 files missing in dst
+INFO - 2023-08-23: created remote directory
+INFO - 2023-08-23:   0 % (1/5) uploaded
+INFO - 2023-08-23:  20 % (2/5) uploaded
+INFO - 2023-08-23:  40 % (3/5) uploaded
+INFO - 2023-08-23:  60 % (4/5) uploaded
+INFO - 2023-08-23:  80 % (5/5) uploaded
+INFO - 2023-08-23: 100 % (5/5) uploaded (finished)
+INFO - 2023-08-23: checksums match
+INFO - 2023-08-23: finished removing source
+INFO - 2023-08-23: done (successful)
 ```
