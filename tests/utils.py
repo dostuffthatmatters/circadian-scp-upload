@@ -1,6 +1,7 @@
 import datetime
 import os
 import random
+import sys
 import time
 from typing import Callable, Literal
 import dotenv
@@ -23,9 +24,10 @@ def load_credentials() -> tuple[str, str, str]:
 def generate_tmp_directory_path() -> str:
     """Generate a path to a temporary directory that does not exist yet."""
     current_timestamp = int(time.time())
+    python_version = sys.version.split(" ")[0]
     current_filepath: Callable[
         [], str
-    ] = lambda: f"/tmp/circadian_scp_upload_test_{current_timestamp}"
+    ] = lambda: f"/tmp/circadian_scp_upload_test_{current_timestamp}_{python_version}"
     while os.path.exists(current_filepath()):
         current_timestamp += 1
     return current_filepath()
