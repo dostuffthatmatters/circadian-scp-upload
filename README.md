@@ -2,8 +2,8 @@
 
 **Resumable, interruptible, SCP upload client for any files or directories generated day by day.**
 
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/circadian_scp_upload?label=supported%20Python%20versions&color=4c1)
-![PyPI - Version](https://img.shields.io/pypi/v/circadian_scp_upload?label=latest%20library%20version%20on%20PyPI&color=4c1)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/circadian_scp_upload?label=supported%20Python%20versions&color=f1f5f9)
+![PyPI - Version](https://img.shields.io/pypi/v/circadian_scp_upload?label=latest%20library%20version%20on%20PyPI&color=f1f5f9)
 ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/dostuffthatmatters/circadian_scp_upload/test.yaml?label=tests%20on%20main%20branch)
 
 ## Use Case
