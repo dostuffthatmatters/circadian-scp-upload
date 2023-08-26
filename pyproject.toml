@@ -5,6 +5,52 @@ description = "Resumable, interruptible, SCP upload client for any files or dire
 authors = ["Moritz Makowski <moritz@dostuffthatmatters.dev>"]
 readme = "README.md"
 packages = [{ include = "circadian_scp_upload" }]
+license = "AGPL-3.0-only"
+documentation = "https://github.com/dostuffthatmatters/circadian_scp_upload"
+repository = "https://github.com/dostuffthatmatters/circadian_scp_upload"
+keywords = [
+    "python",
+    "library",
+    "utilities",
+    "scp",
+    "ssh",
+    "synchronization",
+    "upload",
+    "files",
+    "directories",
+    "checksum",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Pydantic",
+    "Framework :: Pydantic :: 2",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet",
+    "Topic :: Internet :: File Transfer Protocol (FTP)",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Oceanography",
+    "Topic :: Scientific/Engineering :: Hydrology",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System",
+    "Topic :: System :: Archiving",
+    "Topic :: System :: Filesystems",
+    "Topic :: System :: Logging",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+    "Topic :: Typed",
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
