@@ -2,8 +2,8 @@
 
 **Resumable, interruptible, SCP upload client for any files or directories generated day by day.**
 
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/circadian_scp_upload?label=supported%20Python%20versions&color=4c1)<br/>
-![PyPI - Version](https://img.shields.io/pypi/v/circadian_scp_upload?label=latest%20library%20version%20on%20PyPI&color=4c1)<br/>
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/circadian_scp_upload?label=supported%20Python%20versions&color=4c1)
+![PyPI - Version](https://img.shields.io/pypi/v/circadian_scp_upload?label=latest%20library%20version%20on%20PyPI&color=4c1)
 ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/dostuffthatmatters/circadian_scp_upload/test.yaml?label=tests%20on%20main%20branch)
 
 ## Use Case
@@ -48,7 +48,7 @@ You should be able to `pip install`/`poetry add`/... and call a well documented 
 
 First of all, the whole codebase has type hints and is strict checked with [Mypy](https://github.com/python/mypy) - even the snippet in the usage section below is tye checked with Mypy.
 
-Secondly, the date patterning is tested extensively and the upload process of the files and directories is tested with an actual remote server by generating a bunch of sample files and directories and uploading them to that server.
+Secondly, the date patterning is tested extensively and the upload process of the files and directories is tested with an actual remote server by generating a bunch of sample files and directories and uploading them to that server. You can check out the output of the test runs in the [GitHub Actions](https://github.com/dostuffthatmatters/circadian-scp-upload/actions/workflows/test.yaml) of this repository - in the "Run pytests" step.
 
 Thirdly, after the upload, the checksum of the local and the remote directories/files is compared to make sure that the upload was successful. Only if those checksums match, the local files are deleted.
 
