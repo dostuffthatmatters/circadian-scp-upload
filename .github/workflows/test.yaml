@@ -1,0 +1,51 @@
+name: "quick-tests"
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-sensor-codebase:
+    runs-on: ubuntu-latest
+    steps:
+      # check-out repo and install python
+      - name: Check out repository
+        uses: actions/checkout@v3
+      - name: Set up Python 3.10.13
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.13
+
+      # load cache if available
+      - name: Load cached venv
+        id: cached-venv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-3.10.13-${{ hashFiles('poetry.lock') }}
+
+      # install poetry if venv not in cache
+      - name: Install Poetry
+        if: steps.cached-venv.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.6.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Install dependencies
+        if: steps.cached-venv.outputs.cache-hit != 'true'
+        run: poetry install --with=dev
+
+      # run test suite
+      - name: Run pytests
+        env:
+          TEST_SERVER_HOST: ${{ secrets.TEST_SERVER_HOST }}
+          TEST_SERVER_USERNAME: ${{ secrets.TEST_SERVER_USERNAME }}
+          TEST_SERVER_PASSWORD: ${{ secrets.TEST_SERVER_PASSWORD }}
+        run: |
+          source .venv/bin/activate
+          pytest --verbose --capture=no tests/
