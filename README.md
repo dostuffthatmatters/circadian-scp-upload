@@ -54,6 +54,16 @@ Thirdly, after the upload, the checksum of the local and the remote directories/
 
 ## Usage
 
+Install into any Python `^3.10` project:
+
+```bash
+pip install circadian_scp_upload
+# or
+poetry add circadian_scp_upload
+```
+
+Configure and use the upload client:
+
 ```python
 import circadian_scp_upload
 
