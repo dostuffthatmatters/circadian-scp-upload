@@ -1,4 +1,4 @@
-# Circadian SCP Sync
+# Circadian SCP Upload
 
 **Resumable, interruptible, SCP upload client for any files or directories generated day by day.**
 
@@ -9,7 +9,7 @@
 You have a local directory that generates data every day on your local machine. The directory looks like this:
 
 ```
-📁 data-directory-2
+📁 data-directory-1
 ├── 📁 20190101
 │   ├── 📄 file1.txt
 │   ├── 📄 file2.txt
@@ -23,20 +23,32 @@ You have a local directory that generates data every day on your local machine. 
 ... or like this:
 
 ```
-📁 data-directory-1
+📁 data-directory-2
 ├── 📄 20190101.txt
 ├── 📄 20190102-a.txt
 ├── 📄 20190102-b.txt
 └── 📄 20190103.txt
 ```
 
-This tool can sync the local data to a remote server via SCP for these two directory structures.
+... and you want to upload that data to a server, but only after the day of creation. Additionally, you want to mark the directories as "in-progress" on the remote server, so that the next processing steps will not touch unfinished days of data while uploading.
 
-- It will only upload directories or files one hour after midnight of the day they were generated (files directories labeled with `20190101` will only be considered after `2019-01-02 01:00:00`)
-- It is resumable, meaning if the upload is interrupted, it will continue where it left off
-- It is interruptible without running it in a separate thread (`should_abort_upload` callback)
-- After a file or a directory has been uploaded, this tool will compute the checksum of the respective file(s) and delete the local file(s) only if the checksums match and if specified by the user
-- You can specify how dated directories or files are formatted with regexes and `%Y`/`%m`/... expressions (see below)
+This tool uses [SCP](https://en.wikipedia.org/wiki/Secure_copy_protocol) via the Python library [paramiko](https://github.com/paramiko/paramiko) to do that. It will write files named `.do-not-touch` in the local and remote directory during the upload process and deletes them afterwards.
+
+Below, you can find a code snippet that defines a specific directory/file naming scheme (for example `%Y%m%d-(\.txt|\.csv)`). The tool uses this information to tell, when a specific file or directory has been generated. It will only upload files when at least one hour of the following day has passed.
+
+**Can't I use `rsync` or a similiar CLI tool for that?**
+
+Yes, of course. However, the actual copying logic of individual files or directories is just 130 lines of code of this repository. The rest of this library is dedicated to it being a plug-and-play solution for your codebase: logging, regex filters, interruptibility, in-progress markers, etc..
+
+You should be able to `pip install`/`poetry add`/... and call a well documented upload client class instead of having to manually connect your codebase to rsync and do all of this pattern logic yourself.
+
+**How did you make sure, that the upload works correctly?**
+
+First of all, the whole codebase has type hints and is strict checked with [Mypy](https://github.com/python/mypy) - even the snippet in the usage section below is tye checked with Mypy.
+
+Secondly, the date patterning is tested extensively and the upload process of the files and directories is tested with an actual remote server by generating a bunch of sample files and directories and uploading them to that server.
+
+Thirdly, after the upload, the checksum of the local and the remote directories/files is compared to make sure that the upload was successful. Only if those checksums match, the local files are deleted.
 
 <br/>
 
@@ -109,7 +121,7 @@ INFO - 2015-01-16:  80.00 % (5/5) uploaded
 INFO - 2015-01-16: 100.00 % (5/5) uploaded (finished)
 INFO - 2015-01-16: checksums match
 INFO - 2015-01-16: finished removing source
-INFO - 2015-01-16: successful
+INFO - 2015-01-16: done (successful)
 INFO - 2010-03-25: starting
 INFO - 2010-03-25: 5 files missing in dst
 INFO - 2010-03-25: created remote directory at /tmp/circadian_scp_upload_test_1692833117/20100325
@@ -121,5 +133,5 @@ INFO - 2010-03-25:  80.00 % (5/5) uploaded
 INFO - 2010-03-25: 100.00 % (5/5) uploaded (finished)
 INFO - 2010-03-25: checksums match
 INFO - 2010-03-25: finished removing source
-INFO - 2010-03-25: successful
+INFO - 2010-03-25: done (successful)
 ```
