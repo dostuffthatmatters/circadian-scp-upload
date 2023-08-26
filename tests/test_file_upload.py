@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import sys
 from typing import Generator
 import pytest
 import circadian_scp_upload
@@ -13,7 +14,7 @@ def _provide_test_directory() -> (
 ):
     tmp_dir_path, dummy_files = utils.provide_test_directory("files")
     yield tmp_dir_path, dummy_files
-    os.system("rm -rf /tmp/circadian_scp_upload_test_*")
+    os.system(f"rm -rf /tmp/circadian_scp_upload_test_*_{sys.version.split(' ')[0]}/")
 
 
 def _check_directory_state(
@@ -122,7 +123,9 @@ def test_file_upload(
         remote_connection.transfer_process.get(
             tmp_dir_path + ".tar", tmp_dir_path + ".tar"
         )
-        remote_connection.connection.run("rm -rf /tmp/circadian_scp_upload_test_*")
+        remote_connection.connection.run(
+            f"rm -rf /tmp/circadian_scp_upload_test_*_{sys.version.split(' ')[0]}/"
+        )
         os.system(f"cd /tmp && tar -xf {tmp_dir_name}.tar")
 
         # check integrity of remote directory (downloaded to local)

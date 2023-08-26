@@ -53,7 +53,7 @@ if __name__ == "__main__":
         type=str,
         help="regex to match files",
         required=False,
-        default="^[^\.].*$",
+        default=r"^.*$",
     )
 
     args = parser.parse_args()
