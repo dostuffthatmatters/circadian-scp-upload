@@ -25,6 +25,7 @@ def provide_main_template_file() -> Generator[None, None, None]:
     os.remove(PY_FILE_PATH)
 
 
+@pytest.mark.order(1)
 def test_static_types(provide_main_template_file: None) -> None:
     assert os.system("rm -rf .mypy_cache/3.*/circadian_scp_upload") == 0
     assert os.system("mypy circadian_scp_upload") == 0

@@ -9,7 +9,7 @@ from . import utils
 
 
 @pytest.fixture
-def provide_test_directory() -> (
+def _provide_test_directory() -> (
     Generator[tuple[str, dict[str, dict[str, str]]], None, None]
 ):
     tmp_dir_path, dummy_files = utils.provide_test_directory("directories")
@@ -74,8 +74,9 @@ def _check_directory_state(
         )
 
 
+@pytest.mark.order(3)
 def test_directory_upload(
-    provide_test_directory: tuple[str, dict[str, dict[str, str]]]
+    _provide_test_directory: tuple[str, dict[str, dict[str, str]]]
 ) -> None:
     current_time = datetime.datetime.now()
     if current_time.hour == 0 and current_time.minute > 58:
@@ -84,7 +85,7 @@ def test_directory_upload(
             + "interfere with which directories are considered during the upload"
         )
 
-    tmp_dir_path, dummy_files = provide_test_directory
+    tmp_dir_path, dummy_files = _provide_test_directory
 
     print("tmp_dir_path =", tmp_dir_path)
     print("dummy_files =", json.dumps(dummy_files, indent=4))

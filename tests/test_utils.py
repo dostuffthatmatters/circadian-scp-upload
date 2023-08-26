@@ -1,7 +1,10 @@
 import datetime
+
+import pytest
 from circadian_scp_upload.utils import file_or_dir_name_to_date
 
 
+@pytest.mark.order(2)
 def test_file_or_dir_name_to_date_parsing() -> None:
     expected_date = datetime.date(2021, 2, 3)
     assert file_or_dir_name_to_date("2021-02-03", "^%Y%m%d$") == None
@@ -22,6 +25,7 @@ def test_file_or_dir_name_to_date_parsing() -> None:
     assert file_or_dir_name_to_date("02-03-2021", "^%m-%d-%Y$") == expected_date
 
 
+@pytest.mark.order(2)
 def test_file_or_dir_name_to_date_ambiguity() -> None:
     def _test(
         dated_regex: str,
@@ -55,6 +59,7 @@ def test_file_or_dir_name_to_date_ambiguity() -> None:
     )
 
 
+@pytest.mark.order(2)
 def test_file_or_dir_name_to_date_timing() -> None:
     now = datetime.datetime.now()
     latest_date = (
