@@ -1,8 +1,10 @@
-# Circadian SCP Upload
+# 📮 Circadian SCP Upload
 
 **Resumable, interruptible, SCP upload client for any files or directories generated day by day.**
 
-<br/>
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/circadian_scp_upload?label=supported%20Python%20versions&color=4c1)<br/>
+![PyPI - Version](https://img.shields.io/pypi/v/circadian_scp_upload?label=latest%20library%20version%20on%20PyPI&color=4c1)<br/>
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/dostuffthatmatters/circadian_scp_upload/test.yaml?label=tests%20on%20main%20branch)
 
 ## Use Case
 
@@ -80,7 +82,7 @@ upload_client_callbacks = circadian_scp_upload.UploadClientCallbacks(
 
     # which files to consider in the upload process; only supports
     # %Y/%y/%m/%d - does not support parentheses in the string
-    dated_file_regex=r"^[\.].*" + "%Y%m%d" + r".*$",
+    dated_file_regex=r"^.*" + "%Y%m%d" + r".*$",
 
     # use your own logger instead of print statements
     log_info=lambda message: print(f"INFO - {message}"),
