@@ -3,9 +3,21 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "tests/**"
+      - "circadian_scp_upload/**"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - ".github/workflows/test.yaml"
   pull_request:
     branches:
       - main
+    paths:
+      - "tests/**"
+      - "circadian_scp_upload/**"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - ".github/workflows/test.yaml"
 
 jobs:
   test:
