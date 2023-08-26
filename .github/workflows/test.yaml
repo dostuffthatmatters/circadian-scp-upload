@@ -51,4 +51,4 @@ jobs:
           TEST_SERVER_PASSWORD: ${{ secrets.TEST_SERVER_PASSWORD }}
         run: |
           source .venv/bin/activate
-          pytest --verbose --capture=no tests/
+          pytest --verbose --capture=no --cov=circadian_scp_upload tests/
