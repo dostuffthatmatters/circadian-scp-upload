@@ -19,7 +19,7 @@ def generate_random_string(min_length: int = 0, max_length: int = 3) -> str:
 
 def generate_random_dated_regexes() -> list[str]:
     dr: list[str] = []
-    for _ in range(1):
+    for _ in range(4):
         a = generate_random_string()
         b = generate_random_string()
         c = generate_random_string()
@@ -68,8 +68,8 @@ def generate_dummy_dates() -> list[datetime.date]:
     for delta in range(-3, 4):
         timedeltas.append(datetime.timedelta(days=delta))
 
-    # 4 random dates from the past 50 years, 4 from the future 50 years
-    for i in range(2):
+    # 3 random dates from the past 50 years, 4 from the future 50 years
+    for i in range(3):
         timedeltas.append(
             datetime.timedelta(days=(random.choice(range(4, 365 * 50))))
         )
