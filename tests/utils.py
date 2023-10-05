@@ -7,6 +7,29 @@ from typing import Callable, Literal
 import dotenv
 
 
+def generate_random_string(min_length: int = 0, max_length: int = 3) -> str:
+    allowed_ords = list(range(ord("a"), ord("z") + 1))
+    allowed_ords += list(range(ord("A"), ord("Z") + 1))
+    allowed_ords += [ord("-"), ord("_"), ord(".")] * 3
+    return "".join([
+        chr(random.choice(allowed_ords))
+        for _ in range(random.randint(min_length, max_length))
+    ])
+
+
+def generate_random_dated_regexes() -> list[str]:
+    dr: list[str] = []
+    for _ in range(1):
+        a = generate_random_string()
+        b = generate_random_string()
+        c = generate_random_string()
+        specifiers = ["%Y", "%m", "%d"]
+        random.shuffle(specifiers)
+        dr.append(f"{a}{specifiers[0]}{b}{specifiers[1]}{c}{specifiers[2]}.*")
+
+    return list(set(dr))
+
+
 def load_credentials() -> tuple[str, str, str]:
     dotenv.load_dotenv(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
@@ -35,33 +58,31 @@ def generate_tmp_directory_path() -> str:
     return current_filepath()
 
 
-def generate_random_string(n: int = 20) -> str:
-    """Generate a random string consisting of lowercase letters."""
-    letters = [chr(i) for i in range(ord("a"), ord("z") + 1)]
-    return "".join([random.choice(letters) for i in range(n)])
+def generate_dummy_dates() -> list[datetime.date]:
+    """Generate a list of random dates"""
 
-
-def generate_dummy_date_strings() -> list[str]:
-    """Generate a list of dummy date strings (YYYYMMDD)."""
-    current_time = datetime.datetime.now()
+    today = datetime.date.today()
+    timedeltas: list[datetime.timedelta] = []
 
     # the 7 days centered around today
-    dates: list[datetime.date
-               ] = [(current_time + datetime.timedelta(days=delta)).date()
-                    for delta in range(-3, 4)]
+    for delta in range(-3, 4):
+        timedeltas.append(datetime.timedelta(days=delta))
 
     # 4 random dates from the past 50 years, 4 from the future 50 years
-    for i in range(8):
-        dates.append(
-            current_time + datetime.timedelta(
-                days=(random.choice(range(4, 365 * 50)) * (-1 if i < 4 else 1))
-            )
+    for i in range(2):
+        timedeltas.append(
+            datetime.timedelta(days=(random.choice(range(4, 365 * 50))))
+        )
+        timedeltas.append(
+            datetime.timedelta(days=(random.choice(range(4, 365 * 50)) * (-1)))
         )
 
-    return [d.strftime("%Y%m%d") for d in dates]
+    return [today + delta for delta in timedeltas]
 
 
-def generate_dummy_files(date_string: str, n: int = 5) -> dict[str, str]:
+def generate_dummy_files(dated_regex: str,
+                         date: datetime.date,
+                         n: int = 5) -> dict[str, str]:
     """For a given date string, generate a bunch of dummy files.
 
     For example, the call `generate_dummy_files(20190102)` might return:
@@ -75,30 +96,44 @@ def generate_dummy_files(date_string: str, n: int = 5) -> dict[str, str]:
     ```"""
     output: dict[str, str] = {}
     for _ in range(n):
-        prefix = random.choice(["", "ma", "mb", "file-", "01-", "20-", "1900-"])
-        suffix = random.choice([
-            "", ".txt", "_0001", "-0001.txt", "-0002", "_0002.txt"
-        ])
-        output[f"{prefix}{date_string}{suffix}"] = generate_random_string()
+        suffix = generate_random_string(min_length=0, max_length=10)
+        content = generate_random_string(min_length=10, max_length=40)
+        output[f"{date.strftime(dated_regex)[:-2]}{suffix}"] = content
     return output
 
 
 def provide_test_directory(
     variant: Literal["directories", "files"]
-) -> tuple[str, dict[str, dict[str, str]]]:
+) -> tuple[str, dict[str, dict[datetime.date, dict[str, str]]]]:
     tmp_dir_path = generate_tmp_directory_path()
-    dummy_files: dict[str, dict[str, str]] = {
-        ds: generate_dummy_files(ds)
-        for ds in generate_dummy_date_strings()
-    }
-    for date_string, files in dummy_files.items():
-        date_dir_path = tmp_dir_path
-        if variant == "directories":
-            date_dir_path = os.path.join(tmp_dir_path, date_string)
-        os.makedirs(date_dir_path, exist_ok=True)
+    os.mkdir(tmp_dir_path)
 
-        for filename, content in files.items():
-            with open(os.path.join(date_dir_path, filename), "w") as f:
-                f.write(content)
+    dates = generate_dummy_dates()
+    dated_regexes = generate_random_dated_regexes()
+    files: dict[str, dict[datetime.date, dict[str, str]]] = {}
 
-    return tmp_dir_path, dummy_files
+    print("tmp_dir_path = ", tmp_dir_path)
+    print("dates = ", dates)
+    print("dated_regexes = ", dated_regexes)
+
+    for dated_regex in dated_regexes:
+        files[dated_regex] = {}
+        for date in dates:
+            files[dated_regex][date] = generate_dummy_files(dated_regex, date)
+
+    for dated_regex in dated_regexes:
+        root_dir_for_this_regex = os.path.join(tmp_dir_path, dated_regex[:-2])
+        for date in dates:
+            if variant == "directories":
+                date_dir_path = os.path.join(
+                    root_dir_for_this_regex, date.strftime(dated_regex)
+                )
+            else:
+                date_dir_path = root_dir_for_this_regex
+            os.makedirs(date_dir_path, exist_ok=True)
+
+            for filename, content in files[dated_regex][date].items():
+                with open(os.path.join(date_dir_path, filename), "w") as f:
+                    f.write(content)
+
+    return tmp_dir_path, files
