@@ -14,8 +14,8 @@ def filename_is_ambiguous_for_dated_regex(regex: str, filename: str) -> bool:
 
     This happens when this filename could have been produced on more than one
     date with respect to the dated regex. For example, if the dated regex is
-    `^.*%y-%m-%d.*$`, the filename `log-20-11-11-11.txt` is ambiguous because
-    it could have been produced on 2011-11-11 or 2020-11-11."""
+    `^.*%Y%m%d.*$`, the filename `log-2020111111.txt` is ambiguous because
+    it could have been produced on 2020-11-11 or 2011-11-11."""
 
     substrings = ([filename[0 : i] for i in range(1, len(filename))] +
                   [filename[i :] for i in range(1, len(filename))] + [filename])
@@ -48,19 +48,11 @@ def file_or_dir_name_to_date(
     latest_date = ((now - datetime.timedelta(days=1)) if (now.hour > 0) else
                    (now - datetime.timedelta(days=2))).date()
 
-    if "%y" in dated_regex:
-        keys = list(
-            sorted(["%y", "%m", "%d"], key=lambda x: dated_regex.index(x))
-        )
-    else:
-        keys = list(
-            sorted(["%Y", "%m", "%d"], key=lambda x: dated_regex.index(x))
-        )
+    keys = list(sorted(["%Y", "%m", "%d"], key=lambda x: dated_regex.index(x)))
 
     regex = dated_regex
     for old, new in {
         "%Y": r"(\d{4})",
-        "%y": r"(\d{2})",
         "%m": r"(\d{2})",
         "%d": r"(\d{2})",
     }.items():
@@ -170,15 +162,16 @@ class UploadClientCallbacks(pydantic.BaseModel):
     dated_regex: str = pydantic.Field(
         default=r"^.*" + "%Y%m%d" + r".*$",
         description=
-        "Which files/directories to consider in the upload process. The patterns `%Y`/`%y`/`%m`/`%d` represent the date at which the file was generated. Any string containing some pattern except for these four will raise an exception. `%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit month, `%d` = 2-digit day (all fixed width, i.e. zero-padded).",
+        "Which files/directories to consider in the upload process. The patterns `%Y`/`%m`/`%d` represent the date at which the file was generated. Any string containing some pattern except for these four will raise an exception. `%Y` = 4-digit year, `%m` = 2-digit month, `%d` = 2-digit day (all fixed width, i.e. zero-padded).",
     )
 
     @pydantic.field_validator("dated_regex", mode="before")
     @classmethod
     def _validate_dated_regex(cls, v: str) -> str:
         checks: list[tuple[bool, str]] = [
-            (("%Y" in v) or ("%y" in v), "string must contain `%Y` or `%y`"),
-            (("%m" in v) and ("%d" in v), "string must contain `%m` and `%d`"),
+            ("%Y" in v, "string must contain `%Y`"),
+            ("%m" in v, "string must contain `%m`"),
+            ("%d" in v, "string must contain `%d`"),
             (v.count("%") == 3, "string must contain exactly 3 `%` characters"),
             ("(" not in v, "string must not contain `(`"),
             (")" not in v, "string must not contain `)`"),
