@@ -126,7 +126,7 @@ def provide_test_directory(
         for date in dates:
             if variant == "directories":
                 date_dir_path = os.path.join(
-                    root_dir_for_this_regex, date.strftime(dated_regex)
+                    root_dir_for_this_regex, date.strftime(dated_regex[:-2])
                 )
             else:
                 date_dir_path = root_dir_for_this_regex
