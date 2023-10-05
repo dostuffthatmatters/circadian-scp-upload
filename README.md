@@ -77,13 +77,9 @@ import circadian_scp_upload
 # are the default values.
 
 upload_client_callbacks = circadian_scp_upload.UploadClientCallbacks(
-    # which directories to consider in the upload process; only supports
-    # %Y/%y/%m/%d - does not support parentheses in the string
-    dated_directory_regex=r"^" + "%Y%m%d" + r"$",
-
-    # which files to consider in the upload process; only supports
-    # %Y/%y/%m/%d - does not support parentheses in the string
-    dated_file_regex=r"^.*" + "%Y%m%d" + r".*$",
+    # which directories/files to consider in the upload process; only
+    # supports %Y/%y/%m/%d - does not support parentheses in the string
+    dated_regex=r"^" + "%Y%m%d" + r"$",
 
     # use your own logger instead of print statements
     log_info=lambda message: print(f"INFO - {message}"),

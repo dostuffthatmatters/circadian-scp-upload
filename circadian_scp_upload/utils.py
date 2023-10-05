@@ -85,11 +85,13 @@ def file_or_dir_name_to_date(
         return None
 
 
-def get_src_date_strings(
+def get_src_dates(
     src_path: str,
     variant: Literal["directories", "files"],
     dated_regex: str,
 ) -> dict[datetime.date, list[str]]:
+    """For a given src path and dated regex,returns"""
+
     dates: dict[datetime.date, list[str]] = {}
 
     if not os.path.isdir(src_path):
@@ -101,19 +103,16 @@ def get_src_date_strings(
         file_or_dir_path = os.path.join(src_path, file_or_dir_name)
 
         try:
-            if any([
-                (variant == "directories") and
-                (not os.path.isdir(file_or_dir_path)),
-                ((variant == "files") and
-                 (not os.path.isfile(file_or_dir_path))),
-            ]):
-                continue
-            date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
-            if date is None:
-                continue
-            if date not in dates:
-                dates[date] = []
-            dates[date].append(file_or_dir_path)
+            if variant == "directories":
+                consider_path = os.path.isdir(file_or_dir_path)
+            else:
+                consider_path = os.path.isfile(file_or_dir_path)
+            if consider_path:
+                date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
+                if date is not None:
+                    if date not in dates:
+                        dates[date] = []
+                    dates[date].append(file_or_dir_path)
         except ValueError:
             ambiguous_paths.append(file_or_dir_path)
 
@@ -166,34 +165,15 @@ class UploadMeta(pydantic.BaseModel):
 class UploadClientCallbacks(pydantic.BaseModel):
     """A collection of callbacks passed to the upload client."""
 
-    dated_directory_regex: str = pydantic.Field(
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    dated_regex: str = pydantic.Field(
         default=r"^.*" + "%Y%m%d" + r".*$",
-        description=(
-            "Which directories to consider in the upload process. The " +
-            "patterns `%Y`/`%y`/`%m`/`%d` represent the date at which " +
-            "the file was generated. Any string containing some pattern " +
-            "except for these four will raise an exception. " +
-            "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit " +
-            "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
-        ),
-    )
-    dated_file_regex: str = pydantic.Field(
-        default=r"^.*" + "%Y%m%d" + r".*$",
-        description=(
-            "Which files to consider in the upload process. The patterns " +
-            "`%Y`/`%y`/`%m`/`%d` represent the date at which the file " +
-            "was generated. Any string containing some pattern except " +
-            "for these four will raise an exception." +
-            "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit " +
-            "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
-        ),
+        description=
+        "Which files/directories to consider in the upload process. The patterns `%Y`/`%y`/`%m`/`%d` represent the date at which the file was generated. Any string containing some pattern except for these four will raise an exception. `%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit month, `%d` = 2-digit day (all fixed width, i.e. zero-padded).",
     )
 
-    @pydantic.field_validator(
-        "dated_directory_regex",
-        "dated_file_regex",
-        mode="before",
-    )
+    @pydantic.field_validator("dated_regex", mode="before")
     @classmethod
     def _validate_dated_regex(cls, v: str) -> str:
         checks: list[tuple[bool, str]] = [
@@ -221,10 +201,8 @@ class UploadClientCallbacks(pydantic.BaseModel):
     )
     should_abort_upload: Callable[[], bool] = pydantic.Field(
         default=(lambda: False),
-        description="Can be used to interrupt the upload process. This " +
-        "function will be run between each file or directory and (when " +
-        "uploading large directories), after every 25 files. If it " +
-        "returns true, then the upload process will be aborted.",
+        description=
+        "Can be used to interrupt the upload process. This function will be run between each file or directory and (when uploading large directories), after every 25 files. If it returns true, then the upload process will be aborted.",
     )
 
 

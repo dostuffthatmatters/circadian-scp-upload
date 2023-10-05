@@ -55,9 +55,7 @@ class DailyTransferClient:
         self.variant = variant
         self.callbacks = callbacks
 
-    def __directory_checksums_match(
-        self, date: datetime.date, dir_name: str
-    ) -> bool:
+    def __directory_checksums_match(self, dir_name: str) -> bool:
         """Use `hashlib` to generate a checksum for the local and the
         remote directory. The remote checksum will be calculated by
         copying a script to the remote server and executing it there.
@@ -191,7 +189,7 @@ class DailyTransferClient:
             log_progress(1)
 
             # raise an exception if the checksums do not match
-            if not self.__directory_checksums_match(date, dir_name):
+            if not self.__directory_checksums_match(dir_name):
                 log_error("checksums do not match")
                 return "failed"
             else:
@@ -214,7 +212,7 @@ class DailyTransferClient:
         )
 
         # determine file differences between src and dst
-        file_regex = date.strftime(self.callbacks.dated_file_regex)
+        file_regex = date.strftime(self.callbacks.dated_regex)
         src_files = set([
             f for f in os.listdir(self.src_path) if re.match(file_regex, f)
         ])
@@ -258,38 +256,34 @@ class DailyTransferClient:
 
     def run(self) -> None:
         self.block_if_process_is_already_running()
-
-        log_info = self.callbacks.log_info
-
-        dated_regex = (
-            self.callbacks.dated_directory_regex if self.variant
-            == "directories" else self.callbacks.dated_file_regex
+        src_dates = circadian_scp_upload.utils.get_src_dates(
+            self.src_path, self.variant, self.callbacks.dated_regex
         )
-        src_dates = circadian_scp_upload.utils.get_src_date_strings(
-            self.src_path, self.variant, dated_regex
+        self.callbacks.log_info(
+            f"Searching for dates in {self.src_path} using " +
+            f"the regex {self.callbacks.dated_regex}"
         )
-        log_info(
-            f"Searching for dates in {self.src_path} using the regex {dated_regex}"
+        self.callbacks.log_info(
+            f"Found {len(src_dates)} date(s) to be uploaded: {src_dates}"
         )
-        log_info(f"Found {len(src_dates)} date(s) to be uploaded: {src_dates}")
 
         for date, paths in src_dates.items():
             if self.variant == "directories":
-                log_info(
+                self.callbacks.log_info(
                     f"{date}: found {len(paths)} paths for this date: {paths}"
                 )
                 for path in paths:
                     result = self.__upload_date_directory(
                         date, os.path.basename(path)
                     )
-                    log_info(f"{date}: done ({result})")
+                    self.callbacks.log_info(f"{date}: done ({result})")
                     if result == "aborted":
                         break
 
             elif self.variant == "files":
                 result = self.__upload_date_files(date)
-                log_info(f"{date}: done ({result})")
+                self.callbacks.log_info(f"{date}: done ({result})")
 
             if self.callbacks.should_abort_upload():
-                log_info("Aborting upload")
+                self.callbacks.log_info("Aborting upload")
                 break
