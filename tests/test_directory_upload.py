@@ -9,69 +9,61 @@ from . import utils
 
 
 @pytest.fixture
-def _provide_test_directory(
-) -> (Generator[tuple[str, dict[str, dict[str, str]]], None, None]):
+def _provide_test_directory() -> (
+    Generator[tuple[str, dict[str, dict[datetime.date, dict[str, str]]]], None,
+              None]
+):
     tmp_dir_path, dummy_files = utils.provide_test_directory("directories")
     yield tmp_dir_path, dummy_files
-    os.system(
-        f"rm -rf /tmp/circadian_scp_upload_test_*_{sys.version.split(' ')[0]}/"
-    )
+    # os.system(
+    #     f"rm -rf /tmp/circadian_scp_upload_test_*_{sys.version.split(' ')[0]}/"
+    # )
 
 
 def _check_directory_state(
     path: str,
-    dummy_files: dict[str, dict[str, str]],
+    dummy_files: dict[datetime.date, dict[str, str]],
     past_dates_should_exist: bool,
     future_dates_should_exist: bool,
 ) -> None:
     assert os.path.isdir(path)
+    dated_regex = path.split("/")[-1]
 
-    latest_datetime_to_consider = datetime.datetime.now() - datetime.timedelta(
-        days=1
-    )
-    if latest_datetime_to_consider.hour == 0:
-        latest_datetime_to_consider -= datetime.timedelta(days=1)
-    latest_date_string_to_consider = latest_datetime_to_consider.date(
-    ).strftime("%Y%m%d")
+    latest_date_to_consider = datetime.date.today() - datetime.timedelta(days=1)
+    if datetime.datetime.now().hour == 0:
+        latest_date_to_consider -= datetime.timedelta(days=1)
 
     wrongly_existing_directories: list[str] = []
     wrongly_existing_files: list[str] = []
     wrongly_missing_directories: list[str] = []
     wrongly_missing_files: list[str] = []
 
-    for date_string in sorted(dummy_files.keys()):
-        directory_should_exist = (
-            past_dates_should_exist if
-            (date_string
-             <= latest_date_string_to_consider) else future_dates_should_exist
-        )
+    for date in sorted(dummy_files.keys()):
+        if date <= latest_date_to_consider:
+            directory_should_exist = past_dates_should_exist
+        else:
+            directory_should_exist = future_dates_should_exist
 
+        date_dir_path = os.path.join(path, date.strftime(dated_regex))
         if directory_should_exist:
-            if not os.path.isdir(os.path.join(path, date_string)):
-                wrongly_missing_directories.append(
-                    os.path.join(path, date_string)
-                )
-            if os.path.isfile(os.path.join(path, date_string, ".do-not-touch")):
+            if not os.path.isdir(date_dir_path):
+                wrongly_missing_directories.append(date_dir_path)
+
+            if os.path.isfile(os.path.join(date_dir_path, ".do-not-touch")):
                 wrongly_existing_files.append(
-                    os.path.join(path, date_string, ".do-not-touch")
+                    os.path.join(date_dir_path, ".do-not-touch")
                 )
-            for file_name, file_contents in dummy_files[date_string].items():
-                if not os.path.isfile(
-                    os.path.join(path, date_string, file_name)
-                ):
+            for file_name, file_contents in dummy_files[date].items():
+                if not os.path.isfile(os.path.join(date_dir_path, file_name)):
                     wrongly_missing_files.append(
-                        os.path.join(path, date_string, file_name)
+                        os.path.join(date_dir_path, file_name)
                     )
                 else:
-                    with open(
-                        os.path.join(path, date_string, file_name), "r"
-                    ) as f:
+                    with open(os.path.join(date_dir_path, file_name), "r") as f:
                         assert f.read() == file_contents
         else:
-            if os.path.isdir(os.path.join(path, date_string)):
-                wrongly_existing_directories.append(
-                    os.path.join(path, date_string)
-                )
+            if os.path.isdir(date_dir_path):
+                wrongly_existing_directories.append(date_dir_path)
 
     for check_list, check_message in [
         (
@@ -89,7 +81,8 @@ def _check_directory_state(
 
 @pytest.mark.order(3)
 def test_directory_upload(
-    _provide_test_directory: tuple[str, dict[str, dict[str, str]]]
+    _provide_test_directory: tuple[str, dict[str, dict[datetime.date,
+                                                       dict[str, str]]]]
 ) -> None:
     current_time = datetime.datetime.now()
     if current_time.hour == 0 and current_time.minute > 58:
@@ -101,61 +94,81 @@ def test_directory_upload(
 
     tmp_dir_path, dummy_files = _provide_test_directory
 
-    print("tmp_dir_path =", tmp_dir_path)
-    print("dummy_files =", json.dumps(dummy_files, indent=4))
-
-    # check integrity of local directory
-    _check_directory_state(
-        tmp_dir_path,
-        dummy_files,
-        past_dates_should_exist=True,
-        future_dates_should_exist=True,
-    )
-
-    with circadian_scp_upload.RemoteConnection(
-        *utils.load_credentials()
-    ) as remote_connection:
-        assert not remote_connection.transfer_process.is_remote_dir(
-            tmp_dir_path
+    for dated_regex in dummy_files.keys():
+        root_dir_for_this_regex = os.path.join(tmp_dir_path, dated_regex[:-2])
+        dummy_files_for_this_regex = dummy_files[dated_regex]
+        print("root_dir_for_this_regex =", root_dir_for_this_regex)
+        print(
+            "dummy_files_for_this_regex =",
+            json.dumps({
+                str(k): v
+                for k, v in dummy_files_for_this_regex.items()
+            },
+                       indent=4)
         )
-        remote_connection.connection.run(f"mkdir -p {tmp_dir_path}")
-        assert remote_connection.transfer_process.is_remote_dir(tmp_dir_path)
-
-        # perform upload
-        circadian_scp_upload.DailyTransferClient(
-            remote_connection=remote_connection,
-            src_path=tmp_dir_path,
-            dst_path=tmp_dir_path,
-            remove_files_after_upload=True,
-            variant="directories",
-        ).run()
 
         # check integrity of local directory
         _check_directory_state(
-            tmp_dir_path,
-            dummy_files,
-            past_dates_should_exist=False,
+            root_dir_for_this_regex,
+            dummy_files_for_this_regex,
+            past_dates_should_exist=True,
             future_dates_should_exist=True,
         )
 
-        # move old local directory and download remote directory
-        os.rename(tmp_dir_path, tmp_dir_path + "-old-local")
-        tmp_dir_name = tmp_dir_path.split("/")[-1]
-        remote_connection.connection.run(
-            f"cd /tmp && tar -cf {tmp_dir_name}.tar {tmp_dir_name}"
-        )
-        remote_connection.transfer_process.get(
-            tmp_dir_path + ".tar", tmp_dir_path + ".tar"
-        )
-        remote_connection.connection.run(
-            f"rm -rf /tmp/circadian_scp_upload_test_*_{sys.version.split(' ')[0]}/"
-        )
-        os.system(f"cd /tmp && tar -xf {tmp_dir_name}.tar")
+        with circadian_scp_upload.RemoteConnection(
+            *utils.load_credentials()
+        ) as remote_connection:
+            assert not remote_connection.transfer_process.is_remote_dir(
+                root_dir_for_this_regex
+            )
+            remote_connection.connection.run(
+                f"mkdir -p {root_dir_for_this_regex}"
+            )
+            assert remote_connection.transfer_process.is_remote_dir(
+                root_dir_for_this_regex
+            )
 
-        # check integrity of remote directory (downloaded to local)
-        _check_directory_state(
-            tmp_dir_path,
-            dummy_files,
-            past_dates_should_exist=True,
-            future_dates_should_exist=False,
-        )
+            # perform upload
+            circadian_scp_upload.DailyTransferClient(
+                remote_connection=remote_connection,
+                src_path=root_dir_for_this_regex,
+                dst_path=root_dir_for_this_regex,
+                remove_files_after_upload=True,
+                variant="directories",
+                callbacks=circadian_scp_upload.UploadClientCallbacks(
+                    dated_regex=f"^{dated_regex}.*$"
+                )
+            ).run()
+
+            # check integrity of local directory
+            _check_directory_state(
+                root_dir_for_this_regex,
+                dummy_files_for_this_regex,
+                past_dates_should_exist=False,
+                future_dates_should_exist=True,
+            )
+
+            # move old local directory and download remote directory
+            os.rename(
+                root_dir_for_this_regex, root_dir_for_this_regex + "-old-local"
+            )
+            tmp_dir_name = root_dir_for_this_regex.split("/")[-1]
+            remote_connection.connection.run(
+                f'cd "{tmp_dir_path}" && tar -cf "{tmp_dir_name}.tar" "{tmp_dir_name}"'
+            )
+            remote_connection.transfer_process.get(
+                root_dir_for_this_regex + ".tar",
+                root_dir_for_this_regex + ".tar"
+            )
+            remote_connection.connection.run(
+                f'rm -rf "/tmp/circadian_scp_upload_test_*_{sys.version.split()[0]}/"'
+            )
+            os.system(f'cd "{tmp_dir_path}" && tar -xf "{tmp_dir_name}.tar"')
+
+            # check integrity of remote directory (downloaded to local)
+            _check_directory_state(
+                root_dir_for_this_regex,
+                dummy_files_for_this_regex,
+                past_dates_should_exist=True,
+                future_dates_should_exist=False,
+            )
