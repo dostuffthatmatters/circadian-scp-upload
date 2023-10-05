@@ -67,13 +67,17 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.4.1"
-black = "^23.7.0"
 pytest = "^7.4.0"
 pytest-order = "^1.1.0"
 pytest-cov = "^4.1.0"
+yapf = "^0.40.2"
 
-[tool.black]
-line-length = 88
+[tool.yapf]
+based_on_style = "facebook"
+coalesce_brackets = true
+split_before_dict_set_generator = true
+each_dict_entry_on_separate_line = false
+spaces_around_subscript_colon = true
 
 [tool.mypy]
 strict = true

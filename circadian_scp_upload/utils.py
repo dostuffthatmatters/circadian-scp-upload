@@ -17,12 +17,9 @@ def filename_is_ambiguous_for_dated_regex(regex: str, filename: str) -> bool:
     `^.*%y-%m-%d.*$`, the filename `log-20-11-11-11.txt` is ambiguous because
     it could have been produced on 2011-11-11 or 2020-11-11."""
 
-    substrings = (
-        [filename[0:i] for i in range(1, len(filename))]
-        + [filename[i:] for i in range(1, len(filename))]
-        + [filename]
-    )
-    trimmed_regex = regex[regex.index("(") : regex.rindex(")") + 1]
+    substrings = ([filename[0 : i] for i in range(1, len(filename))] +
+                  [filename[i :] for i in range(1, len(filename))] + [filename])
+    trimmed_regex = regex[regex.index("("): regex.rindex(")") + 1]
     trimmed_regex = trimmed_regex.replace("(", "").replace(")", "")
 
     matches: list[str] = []
@@ -48,16 +45,17 @@ def file_or_dir_name_to_date(
     # only consider dates after at least 1
     # hour of the following day has passed
     now = datetime.datetime.now()
-    latest_date = (
-        (now - datetime.timedelta(days=1))
-        if (now.hour > 0)
-        else (now - datetime.timedelta(days=2))
-    ).date()
+    latest_date = ((now - datetime.timedelta(days=1)) if (now.hour > 0) else
+                   (now - datetime.timedelta(days=2))).date()
 
     if "%y" in dated_regex:
-        keys = list(sorted(["%y", "%m", "%d"], key=lambda x: dated_regex.index(x)))
+        keys = list(
+            sorted(["%y", "%m", "%d"], key=lambda x: dated_regex.index(x))
+        )
     else:
-        keys = list(sorted(["%Y", "%m", "%d"], key=lambda x: dated_regex.index(x)))
+        keys = list(
+            sorted(["%Y", "%m", "%d"], key=lambda x: dated_regex.index(x))
+        )
 
     regex = dated_regex
     for old, new in {
@@ -103,13 +101,12 @@ def get_src_date_strings(
         file_or_dir_path = os.path.join(src_path, file_or_dir_name)
 
         try:
-            if any(
-                [
-                    (variant == "directories")
-                    and (not os.path.isdir(file_or_dir_path)),
-                    ((variant == "files") and (not os.path.isfile(file_or_dir_path))),
-                ]
-            ):
+            if any([
+                (variant == "directories") and
+                (not os.path.isdir(file_or_dir_path)),
+                ((variant == "files") and
+                 (not os.path.isfile(file_or_dir_path))),
+            ]):
                 continue
             date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
             if date is None:
@@ -123,10 +120,10 @@ def get_src_date_strings(
     if len(ambiguous_paths) > 0:
         raise ValueError(
             f"The following {variant} match the regex `{repr(dated_regex)}` but cannot be "
-            + f"parsed with parsed into a valid date because the result is ambiguous (can "
-            + "be produced on more than one date): [\n"
-            + ",\n".join(ambiguous_paths)
-            + "\n]"
+            +
+            f"parsed with parsed into a valid date because the result is ambiguous (can "
+            + "be produced on more than one date): [\n" +
+            ",\n".join(ambiguous_paths) + "\n]"
         )
 
     return dates
@@ -138,7 +135,9 @@ class UploadMeta(pydantic.BaseModel):
 
     def dump(self) -> None:
         """dumps the meta object to a JSON file"""
-        with open(os.path.join(self.src_dir_path, "upload-meta.json"), "w") as f:
+        with open(
+            os.path.join(self.src_dir_path, "upload-meta.json"), "w"
+        ) as f:
             json.dump(self.model_dump(exclude={"src_dir_path"}), f, indent=4)
 
     @staticmethod
@@ -147,7 +146,9 @@ class UploadMeta(pydantic.BaseModel):
 
         if os.path.isfile(src_dir_path):
             try:
-                with open(os.path.join(src_dir_path, "upload-meta.json"), "r") as f:
+                with open(
+                    os.path.join(src_dir_path, "upload-meta.json"), "r"
+                ) as f:
                     meta = UploadMeta(src_dir_path=src_dir_path, **json.load(f))
             except (
                 FileNotFoundError,
@@ -168,23 +169,23 @@ class UploadClientCallbacks(pydantic.BaseModel):
     dated_directory_regex: str = pydantic.Field(
         default=r"^.*" + "%Y%m%d" + r".*$",
         description=(
-            "Which directories to consider in the upload process. The "
-            + "patterns `%Y`/`%y`/`%m`/`%d` represent the date at which "
-            + "the file was generated. Any string containing some pattern "
-            + "except for these four will raise an exception. "
-            + "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit "
-            + "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
+            "Which directories to consider in the upload process. The " +
+            "patterns `%Y`/`%y`/`%m`/`%d` represent the date at which " +
+            "the file was generated. Any string containing some pattern " +
+            "except for these four will raise an exception. " +
+            "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit " +
+            "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
         ),
     )
     dated_file_regex: str = pydantic.Field(
         default=r"^.*" + "%Y%m%d" + r".*$",
         description=(
-            "Which files to consider in the upload process. The patterns "
-            + "`%Y`/`%y`/`%m`/`%d` represent the date at which the file "
-            + "was generated. Any string containing some pattern except "
-            + "for these four will raise an exception."
-            + "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit "
-            + "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
+            "Which files to consider in the upload process. The patterns " +
+            "`%Y`/`%y`/`%m`/`%d` represent the date at which the file " +
+            "was generated. Any string containing some pattern except " +
+            "for these four will raise an exception." +
+            "`%Y` = 4-digit year, `%y` = 2-digit year, `%m` = 2-digit " +
+            "month, `%d` = 2-digit day (all fixed width, i.e. zero-padded)."
         ),
     )
 
@@ -215,14 +216,15 @@ class UploadClientCallbacks(pydantic.BaseModel):
     )
     log_error: Callable[[str], None] = pydantic.Field(
         default=(lambda msg: print(f"ERROR - {msg}")),
-        description="Function to be called when logging a message or type ERROR.",
+        description=
+        "Function to be called when logging a message or type ERROR.",
     )
     should_abort_upload: Callable[[], bool] = pydantic.Field(
         default=(lambda: False),
-        description="Can be used to interrupt the upload process. This "
-        + "function will be run between each file or directory and (when "
-        + "uploading large directories), after every 25 files. If it "
-        + "returns true, then the upload process will be aborted.",
+        description="Can be used to interrupt the upload process. This " +
+        "function will be run between each file or directory and (when " +
+        "uploading large directories), after every 25 files. If it " +
+        "returns true, then the upload process will be aborted.",
     )
 
 

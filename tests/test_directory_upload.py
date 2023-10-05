@@ -9,12 +9,13 @@ from . import utils
 
 
 @pytest.fixture
-def _provide_test_directory() -> (
-    Generator[tuple[str, dict[str, dict[str, str]]], None, None]
-):
+def _provide_test_directory(
+) -> (Generator[tuple[str, dict[str, dict[str, str]]], None, None]):
     tmp_dir_path, dummy_files = utils.provide_test_directory("directories")
     yield tmp_dir_path, dummy_files
-    os.system(f"rm -rf /tmp/circadian_scp_upload_test_*_{sys.version.split(' ')[0]}/")
+    os.system(
+        f"rm -rf /tmp/circadian_scp_upload_test_*_{sys.version.split(' ')[0]}/"
+    )
 
 
 def _check_directory_state(
@@ -25,12 +26,13 @@ def _check_directory_state(
 ) -> None:
     assert os.path.isdir(path)
 
-    latest_datetime_to_consider = datetime.datetime.now() - datetime.timedelta(days=1)
+    latest_datetime_to_consider = datetime.datetime.now() - datetime.timedelta(
+        days=1
+    )
     if latest_datetime_to_consider.hour == 0:
         latest_datetime_to_consider -= datetime.timedelta(days=1)
-    latest_date_string_to_consider = latest_datetime_to_consider.date().strftime(
-        "%Y%m%d"
-    )
+    latest_date_string_to_consider = latest_datetime_to_consider.date(
+    ).strftime("%Y%m%d")
 
     wrongly_existing_directories: list[str] = []
     wrongly_existing_files: list[str] = []
@@ -39,32 +41,43 @@ def _check_directory_state(
 
     for date_string in sorted(dummy_files.keys()):
         directory_should_exist = (
-            past_dates_should_exist
-            if (date_string <= latest_date_string_to_consider)
-            else future_dates_should_exist
+            past_dates_should_exist if
+            (date_string
+             <= latest_date_string_to_consider) else future_dates_should_exist
         )
 
         if directory_should_exist:
             if not os.path.isdir(os.path.join(path, date_string)):
-                wrongly_missing_directories.append(os.path.join(path, date_string))
+                wrongly_missing_directories.append(
+                    os.path.join(path, date_string)
+                )
             if os.path.isfile(os.path.join(path, date_string, ".do-not-touch")):
                 wrongly_existing_files.append(
                     os.path.join(path, date_string, ".do-not-touch")
                 )
             for file_name, file_contents in dummy_files[date_string].items():
-                if not os.path.isfile(os.path.join(path, date_string, file_name)):
+                if not os.path.isfile(
+                    os.path.join(path, date_string, file_name)
+                ):
                     wrongly_missing_files.append(
                         os.path.join(path, date_string, file_name)
                     )
                 else:
-                    with open(os.path.join(path, date_string, file_name), "r") as f:
+                    with open(
+                        os.path.join(path, date_string, file_name), "r"
+                    ) as f:
                         assert f.read() == file_contents
         else:
             if os.path.isdir(os.path.join(path, date_string)):
-                wrongly_existing_directories.append(os.path.join(path, date_string))
+                wrongly_existing_directories.append(
+                    os.path.join(path, date_string)
+                )
 
     for check_list, check_message in [
-        (wrongly_existing_directories, "The following directories should not exist"),
+        (
+            wrongly_existing_directories,
+            "The following directories should not exist"
+        ),
         (wrongly_existing_files, "The following files should not exist"),
         (wrongly_missing_directories, "The following directories should exist"),
         (wrongly_missing_files, "The following files should exist"),
@@ -82,7 +95,8 @@ def test_directory_upload(
     if current_time.hour == 0 and current_time.minute > 58:
         raise RuntimeError(
             "Test cannot be started between 00:58 and 01:00, because it might "
-            + "interfere with which directories are considered during the upload"
+            +
+            "interfere with which directories are considered during the upload"
         )
 
     tmp_dir_path, dummy_files = _provide_test_directory
@@ -101,7 +115,9 @@ def test_directory_upload(
     with circadian_scp_upload.RemoteConnection(
         *utils.load_credentials()
     ) as remote_connection:
-        assert not remote_connection.transfer_process.is_remote_dir(tmp_dir_path)
+        assert not remote_connection.transfer_process.is_remote_dir(
+            tmp_dir_path
+        )
         remote_connection.connection.run(f"mkdir -p {tmp_dir_path}")
         assert remote_connection.transfer_process.is_remote_dir(tmp_dir_path)
 

@@ -42,7 +42,8 @@ class DailyTransferClient:
         dst_path: str,
         remove_files_after_upload: bool,
         variant: Literal["directories", "files"],
-        callbacks: circadian_scp_upload.UploadClientCallbacks = circadian_scp_upload.UploadClientCallbacks(),
+        callbacks: circadian_scp_upload.
+        UploadClientCallbacks = circadian_scp_upload.UploadClientCallbacks(),
     ) -> None:
         self.src_path = src_path.rstrip("/")
         self.dst_path = dst_path.rstrip("/")
@@ -54,7 +55,9 @@ class DailyTransferClient:
         self.variant = variant
         self.callbacks = callbacks
 
-    def __directory_checksums_match(self, date: datetime.date, dir_name: str) -> bool:
+    def __directory_checksums_match(
+        self, date: datetime.date, dir_name: str
+    ) -> bool:
         """Use `hashlib` to generate a checksum for the local and the
         remote directory. The remote checksum will be calculated by
         copying a script to the remote server and executing it there.
@@ -110,31 +113,30 @@ class DailyTransferClient:
         6. Remove the remote meta file
         7. Optionally remove local ifgs"""
 
-        log_info: Callable[[str], None] = lambda msg: self.callbacks.log_info(
-            f"{date}: {msg}"
-        )
-        log_error: Callable[[str], None] = lambda msg: self.callbacks.log_error(
-            f"{date}: {msg}"
-        )
+        log_info: Callable[
+            [str],
+            None] = lambda msg: self.callbacks.log_info(f"{date}: {msg}")
+        log_error: Callable[
+            [str],
+            None] = lambda msg: self.callbacks.log_error(f"{date}: {msg}")
 
         src_dir_path = os.path.join(self.src_path, dir_name)
         dst_dir_path = f"{self.dst_path}/{dir_name}"
         log_info(
-            f"starting to upload directory local directory '{src_dir_path}'"
-            + f" to remote directory '{dst_dir_path}'"
+            f"starting to upload directory local directory '{src_dir_path}'" +
+            f" to remote directory '{dst_dir_path}'"
         )
 
-        meta = circadian_scp_upload.utils.UploadMeta.init(src_dir_path=src_dir_path)
+        meta = circadian_scp_upload.utils.UploadMeta.init(
+            src_dir_path=src_dir_path
+        )
 
         # determine files present in src and dst directory
         # files should be named like "<anything>YYYYMMDD<anything>"
-        src_files = set(
-            [
-                f
-                for f in os.listdir(src_dir_path)
-                if f not in ["upload-meta.json", ".do-not-touch"]
-            ]
-        )
+        src_files = set([
+            f for f in os.listdir(src_dir_path)
+            if f not in ["upload-meta.json", ".do-not-touch"]
+        ])
         log_info(f"found {len(src_files)} files in src directory")
 
         # quit if no src files are found
@@ -148,16 +150,20 @@ class DailyTransferClient:
         log_info(f"{len(files_missing_in_dst)} files missing in dst")
 
         # possibly create remote directory
-        if not self.remote_connection.transfer_process.is_remote_dir(dst_dir_path):
+        if not self.remote_connection.transfer_process.is_remote_dir(
+            dst_dir_path
+        ):
             self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
-            assert self.remote_connection.transfer_process.is_remote_dir(dst_dir_path)
+            assert self.remote_connection.transfer_process.is_remote_dir(
+                dst_dir_path
+            )
             log_info(f"created remote directory")
 
         # logging progress every 10%
         max_file_count_characters = len(str(len(src_files)))
         log_progress: Callable[[float], None] = lambda fraction: log_info(
-            f"{int(fraction * 100):3d} % "
-            + f"({len(meta.uploaded_files):{max_file_count_characters}d}/{len(src_files)})"
+            f"{int(fraction * 100):3d} % " +
+            f"({len(meta.uploaded_files):{max_file_count_characters}d}/{len(src_files)})"
             + f" uploaded {'(finished)' if fraction == 1 else ''}"
         )
 
@@ -203,13 +209,15 @@ class DailyTransferClient:
     def __upload_date_files(
         self, date: datetime.date
     ) -> Literal["successful", "failed"]:
-        meta = circadian_scp_upload.utils.UploadMeta.init(src_dir_path=self.src_path)
+        meta = circadian_scp_upload.utils.UploadMeta.init(
+            src_dir_path=self.src_path
+        )
 
         # determine file differences between src and dst
         file_regex = date.strftime(self.callbacks.dated_file_regex)
-        src_files = set(
-            [f for f in os.listdir(self.src_path) if re.match(file_regex, f)]
-        )
+        src_files = set([
+            f for f in os.listdir(self.src_path) if re.match(file_regex, f)
+        ])
         files_missing_in_dst = src_files.difference(set(meta.uploaded_files))
         self.callbacks.log_info(
             f"{date}: {len(files_missing_in_dst)} files missing in dst"
@@ -244,8 +252,8 @@ class DailyTransferClient:
         ) + glob.glob(os.path.join(self.src_path, ".do-not-touch")):
             if filelock.FileLock(do_not_touch_filepath).is_locked:
                 raise Exception(
-                    f"path is used by another upload process: "
-                    + f"filelock at {do_not_touch_filepath} is locked"
+                    f"path is used by another upload process: " +
+                    f"filelock at {do_not_touch_filepath} is locked"
                 )
 
     def run(self) -> None:
@@ -254,9 +262,8 @@ class DailyTransferClient:
         log_info = self.callbacks.log_info
 
         dated_regex = (
-            self.callbacks.dated_directory_regex
-            if self.variant == "directories"
-            else self.callbacks.dated_file_regex
+            self.callbacks.dated_directory_regex if self.variant
+            == "directories" else self.callbacks.dated_file_regex
         )
         src_dates = circadian_scp_upload.utils.get_src_date_strings(
             self.src_path, self.variant, dated_regex
@@ -268,9 +275,13 @@ class DailyTransferClient:
 
         for date, paths in src_dates.items():
             if self.variant == "directories":
-                log_info(f"{date}: found {len(paths)} paths for this date: {paths}")
+                log_info(
+                    f"{date}: found {len(paths)} paths for this date: {paths}"
+                )
                 for path in paths:
-                    result = self.__upload_date_directory(date, os.path.basename(path))
+                    result = self.__upload_date_directory(
+                        date, os.path.basename(path)
+                    )
                     log_info(f"{date}: done ({result})")
                     if result == "aborted":
                         break

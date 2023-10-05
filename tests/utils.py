@@ -8,7 +8,9 @@ import dotenv
 
 
 def load_credentials() -> tuple[str, str, str]:
-    dotenv.load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+    dotenv.load_dotenv(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    )
     TEST_SERVER_HOST = os.getenv("TEST_SERVER_HOST")
     assert isinstance(TEST_SERVER_HOST, str)
 
@@ -44,15 +46,14 @@ def generate_dummy_date_strings() -> list[str]:
     current_time = datetime.datetime.now()
 
     # the 7 days centered around today
-    dates: list[datetime.date] = [
-        (current_time + datetime.timedelta(days=delta)).date() for delta in range(-3, 4)
-    ]
+    dates: list[datetime.date
+               ] = [(current_time + datetime.timedelta(days=delta)).date()
+                    for delta in range(-3, 4)]
 
     # 4 random dates from the past 50 years, 4 from the future 50 years
     for i in range(8):
         dates.append(
-            current_time
-            + datetime.timedelta(
+            current_time + datetime.timedelta(
                 days=(random.choice(range(4, 365 * 50)) * (-1 if i < 4 else 1))
             )
         )
@@ -75,7 +76,9 @@ def generate_dummy_files(date_string: str, n: int = 5) -> dict[str, str]:
     output: dict[str, str] = {}
     for _ in range(n):
         prefix = random.choice(["", "ma", "mb", "file-", "01-", "20-", "1900-"])
-        suffix = random.choice(["", ".txt", "_0001", "-0001.txt", "-0002", "_0002.txt"])
+        suffix = random.choice([
+            "", ".txt", "_0001", "-0001.txt", "-0002", "_0002.txt"
+        ])
         output[f"{prefix}{date_string}{suffix}"] = generate_random_string()
     return output
 
@@ -85,7 +88,8 @@ def provide_test_directory(
 ) -> tuple[str, dict[str, dict[str, str]]]:
     tmp_dir_path = generate_tmp_directory_path()
     dummy_files: dict[str, dict[str, str]] = {
-        ds: generate_dummy_files(ds) for ds in generate_dummy_date_strings()
+        ds: generate_dummy_files(ds)
+        for ds in generate_dummy_date_strings()
     }
     for date_string, files in dummy_files.items():
         date_dir_path = tmp_dir_path

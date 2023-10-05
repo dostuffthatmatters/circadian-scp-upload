@@ -10,14 +10,12 @@ def get_dir_checksum(path: str, file_regex: str) -> str:
     ifg_files: list[str] = []
     for p in pathlib.Path(path).glob("*"):
         basename = str(p).split("/")[-1]
-        if all(
-            [
-                p.is_file(),
-                basename != ".do-not-touch",
-                basename != "upload-meta.json",
-                re.match(file_regex, basename),
-            ]
-        ):
+        if all([
+            p.is_file(),
+            basename != ".do-not-touch",
+            basename != "upload-meta.json",
+            re.match(file_regex, basename),
+        ]):
             ifg_files.append(str(p))
 
     # calculate checksum over all files (sorted)
