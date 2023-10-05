@@ -38,15 +38,18 @@ def test_file_or_dir_name_to_date_ambiguity() -> None:
         good_strings: list[str],
         bad_strings: list[str],
     ) -> None:
+        print(f"dated_regex = {dated_regex}")
         for good_string in good_strings:
+            print(f"good_string = {good_string}")
             assert file_or_dir_name_to_date(
                 good_string, dated_regex
             ) is not None
 
         for bad_string in bad_strings:
+            print(f"bad_string = {bad_string}")
             try:
                 file_or_dir_name_to_date(bad_string, dated_regex)
-                assert False, "Should have raised a ValueError"
+                assert False, f'Should have raised a ValueError'
             except ValueError:
                 pass
 
@@ -61,9 +64,9 @@ def test_file_or_dir_name_to_date_ambiguity() -> None:
         bad_strings=["202202041", "20220204-20220205"],
     )
     _test(
-        dated_regex="^.*%y-%m-%d*$",
+        dated_regex="^.*%Y-%m-%d.*$",
         good_strings=["2022-02-04"],
-        bad_strings=["10-11-12-13", "22-02-04_22-02-05"],
+        bad_strings=["2020-11-2020-11-11", "2020-11-20.2020-12-20"],
     )
 
 
