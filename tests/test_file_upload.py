@@ -1,16 +1,17 @@
+from typing import Dict, Generator, List, Tuple
 import datetime
 import json
 import os
 import sys
-from typing import Generator
 import pytest
+
 import circadian_scp_upload
 from . import utils
 
 
 @pytest.fixture
 def _provide_test_directory() -> (
-    Generator[tuple[str, dict[str, dict[datetime.date, dict[str, str]]]], None,
+    Generator[Tuple[str, Dict[str, Dict[datetime.date, Dict[str, str]]]], None,
               None]
 ):
     tmp_dir_path, dummy_files = utils.provide_test_directory("files")
@@ -22,7 +23,7 @@ def _provide_test_directory() -> (
 
 def _check_directory_state(
     path: str,
-    dummy_files: dict[datetime.date, dict[str, str]],
+    dummy_files: Dict[datetime.date, Dict[str, str]],
     past_dates_should_exist: bool,
     future_dates_should_exist: bool,
 ) -> None:
@@ -32,8 +33,8 @@ def _check_directory_state(
     if datetime.datetime.now().hour == 0:
         latest_date_to_consider -= datetime.timedelta(days=1)
 
-    wrongly_existing_files: list[str] = []
-    wrongly_missing_files: list[str] = []
+    wrongly_existing_files: List[str] = []
+    wrongly_missing_files: List[str] = []
 
     if os.path.isfile(os.path.join(path, ".do-not-touch")):
         wrongly_existing_files.append(os.path.join(path, ".do-not-touch"))
@@ -67,8 +68,8 @@ def _check_directory_state(
 
 @pytest.mark.order(4)
 def test_file_upload(
-    _provide_test_directory: tuple[str, dict[str, dict[datetime.date,
-                                                       dict[str, str]]]]
+    _provide_test_directory: Tuple[str, Dict[str, Dict[datetime.date,
+                                                       Dict[str, str]]]]
 ) -> None:
     current_time = datetime.datetime.now()
     if current_time.hour == 0 and current_time.minute > 58:

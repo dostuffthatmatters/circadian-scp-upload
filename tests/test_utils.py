@@ -1,6 +1,7 @@
+from typing import List
 import datetime
-
 import pytest
+
 from circadian_scp_upload.utils import file_or_dir_name_to_date
 
 
@@ -35,8 +36,8 @@ def test_file_or_dir_name_to_date_parsing() -> None:
 def test_file_or_dir_name_to_date_ambiguity() -> None:
     def _test(
         dated_regex: str,
-        good_strings: list[str],
-        bad_strings: list[str],
+        good_strings: List[str],
+        bad_strings: List[str],
     ) -> None:
         print(f"dated_regex = {dated_regex}")
         for good_string in good_strings:

@@ -1,8 +1,8 @@
 from __future__ import annotations
+from typing import Any, Callable, List, Literal, Optional
 import json
 import os
 import re
-from typing import Any, Callable, Literal, Optional
 import datetime
 import pydantic
 import filelock
@@ -122,7 +122,7 @@ def get_src_dates(
 
 class UploadMeta(pydantic.BaseModel):
     src_dir_path: str
-    uploaded_files: list[str]
+    uploaded_files: List[str]
 
     def dump(self) -> None:
         """dumps the meta object to a JSON file"""

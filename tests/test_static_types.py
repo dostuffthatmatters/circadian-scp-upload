@@ -1,6 +1,6 @@
+from typing import Generator
 import os
 import re
-from typing import Generator
 import pytest
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

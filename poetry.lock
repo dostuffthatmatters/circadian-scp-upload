@@ -11,6 +11,9 @@ files = [
     {file = "annotated_types-0.5.0.tar.gz", hash = "sha256:47cdc3490d9ac1506ce92c7aaa76c579dc3509ff11e098fc867e5130ab7be802"},
 ]
 
+[package.dependencies]
+typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.9\""}
+
 [[package]]
 name = "bcrypt"
 version = "4.0.1"
@@ -696,7 +699,10 @@ files = [
 ]
 
 [package.dependencies]
-pytest = {version = ">=6.2.4", markers = "python_version >= \"3.10\""}
+pytest = [
+    {version = ">=5.0", markers = "python_version < \"3.10\""},
+    {version = ">=6.2.4", markers = "python_version >= \"3.10\""},
+]
 
 [[package]]
 name = "python-dotenv"
@@ -851,5 +857,5 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.10"
-content-hash = "c2c2e17a1ff3f5629074d11a0df5241a717b7f98a9e330b8d6f94d459d3d3b5d"
+python-versions = "^3.8"
+content-hash = "5c9667cb3c7a3b4b02ad72b8286cf22d2f383e9ee2755b0a3ea18372cbaee6c5"

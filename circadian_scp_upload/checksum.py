@@ -1,3 +1,4 @@
+from typing import List
 import argparse
 import re
 import os
@@ -7,7 +8,7 @@ import pathlib
 
 def get_dir_checksum(path: str, file_regex: str) -> str:
     assert os.path.isdir(path), f'"{path}" is not a directory'
-    ifg_files: list[str] = []
+    ifg_files: List[str] = []
     for p in pathlib.Path(path).glob("*"):
         basename = str(p).split("/")[-1]
         if all([

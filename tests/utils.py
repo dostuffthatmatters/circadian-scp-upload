@@ -1,9 +1,9 @@
+from typing import Callable, Dict, List, Literal, Tuple
 import datetime
 import os
 import random
 import sys
 import time
-from typing import Callable, Literal
 import dotenv
 
 
@@ -27,8 +27,8 @@ def generate_random_string(min_length: int = 0, max_length: int = 5) -> str:
     return string
 
 
-def generate_random_dated_regexes() -> list[str]:
-    dr: list[str] = []
+def generate_random_dated_regexes() -> List[str]:
+    dr: List[str] = []
     for _ in range(3):
         a = generate_random_string()
         b = generate_random_string()
@@ -40,7 +40,7 @@ def generate_random_dated_regexes() -> list[str]:
     return list(set(dr))
 
 
-def load_credentials() -> tuple[str, str, str]:
+def load_credentials() -> Tuple[str, str, str]:
     dotenv.load_dotenv(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
     )
@@ -68,11 +68,11 @@ def generate_tmp_directory_path() -> str:
     return current_filepath()
 
 
-def generate_dummy_dates() -> list[datetime.date]:
+def generate_dummy_dates() -> List[datetime.date]:
     """Generate a list of random dates"""
 
     today = datetime.date.today()
-    timedeltas: list[datetime.timedelta] = []
+    timedeltas: List[datetime.timedelta] = []
 
     # the 7 days centered around today
     for delta in range(-3, 4):
@@ -92,7 +92,7 @@ def generate_dummy_dates() -> list[datetime.date]:
 
 def generate_dummy_files(dated_regex: str,
                          date: datetime.date,
-                         n: int = 5) -> dict[str, str]:
+                         n: int = 5) -> Dict[str, str]:
     """For a given date string, generate a bunch of dummy files.
 
     For example, the call `generate_dummy_files(20190102)` might return:
@@ -104,7 +104,7 @@ def generate_dummy_files(dated_regex: str,
         ...
     }
     ```"""
-    output: dict[str, str] = {}
+    output: Dict[str, str] = {}
     for _ in range(n):
         suffix = generate_random_string(min_length=0, max_length=10)
         content = generate_random_string(min_length=10, max_length=40)
@@ -114,13 +114,13 @@ def generate_dummy_files(dated_regex: str,
 
 def provide_test_directory(
     variant: Literal["directories", "files"]
-) -> tuple[str, dict[str, dict[datetime.date, dict[str, str]]]]:
+) -> Tuple[str, Dict[str, Dict[datetime.date, Dict[str, str]]]]:
     tmp_dir_path = generate_tmp_directory_path()
     os.mkdir(tmp_dir_path)
 
     dates = generate_dummy_dates()
     dated_regexes = generate_random_dated_regexes()
-    files: dict[str, dict[datetime.date, dict[str, str]]] = {}
+    files: Dict[str, Dict[datetime.date, Dict[str, str]]] = {}
 
     print("tmp_dir_path = ", tmp_dir_path)
     print("dates = ", dates)

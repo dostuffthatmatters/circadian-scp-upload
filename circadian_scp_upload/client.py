@@ -1,8 +1,8 @@
 from __future__ import annotations
+from typing import Any, Callable, Literal
 import datetime
 import glob
 import math
-from typing import Any, Callable, Literal
 import fabric.connection
 import fabric.transfer
 import os
@@ -10,6 +10,7 @@ import shutil
 import filelock
 import invoke
 import re
+
 import circadian_scp_upload
 
 
