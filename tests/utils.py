@@ -7,19 +7,29 @@ from typing import Callable, Literal
 import dotenv
 
 
-def generate_random_string(min_length: int = 0, max_length: int = 3) -> str:
-    allowed_ords = list(range(ord("a"), ord("z") + 1))
-    allowed_ords += list(range(ord("A"), ord("Z") + 1))
-    allowed_ords += [ord("-"), ord("_"), ord(".")] * 3
-    return "".join([
-        chr(random.choice(allowed_ords))
-        for _ in range(random.randint(min_length, max_length))
-    ])
+def generate_random_string(min_length: int = 0, max_length: int = 5) -> str:
+    """Generate a random string of length between `min_length` and `max_length`
+    with random letters, and symbols (dash, underscore, dot). The strings will
+    always start and end with a letter."""
+
+    allowed_characters = [chr(o) for o in range(ord("a"), ord("z") + 1)]
+    allowed_characters += [chr(o) for o in range(ord("A"), ord("Z") + 1)]
+    allowed_symbols = ["-", "_", "."] * 3
+    random_length = random.randint(min_length, max_length)
+    string = ""
+    if random_length > 0:
+        string += random.choice(allowed_characters)
+    if random_length > 2:
+        for _ in range(random_length - 2):
+            string += random.choice(allowed_characters + allowed_symbols)
+    if random_length > 1:
+        string += random.choice(allowed_characters)
+    return string
 
 
 def generate_random_dated_regexes() -> list[str]:
     dr: list[str] = []
-    for _ in range(4):
+    for _ in range(3):
         a = generate_random_string()
         b = generate_random_string()
         c = generate_random_string()
