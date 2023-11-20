@@ -171,7 +171,10 @@ class DailyTransferClient:
 
         # locking the directory both locally and remote
         with circadian_scp_upload.utils.TwinFileLock(
-            src_dir_path, dst_dir_path, self.remote_connection.connection
+            src_dir_path,
+            dst_dir_path,
+            self.remote_connection.connection,
+            log_info=self.callbacks.log_info
         ):
             progress: float = len(meta.uploaded_files) / len(src_files)
 
@@ -227,7 +230,10 @@ class DailyTransferClient:
 
         # locking the directory both locally and remote
         with circadian_scp_upload.utils.TwinFileLock(
-            self.src_path, self.dst_path, self.remote_connection.connection
+            self.src_path,
+            self.dst_path,
+            self.remote_connection.connection,
+            log_info=self.callbacks.log_info
         ):
             # upload every file that is missing in the remote
             # meta but present in the local directory
