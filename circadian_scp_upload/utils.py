@@ -205,18 +205,38 @@ class TwinFileLock:
         local_dir_path: str,
         remote_dir_path: str,
         remote_connection: fabric.connection.Connection,
+        log_info: Optional[Callable[[str], None]] = None,
     ):
         self.src_filepath = os.path.join(local_dir_path, ".do-not-touch")
         self.dst_filepath = f"{remote_dir_path}/.do-not-touch"
 
         self.src_filelock = filelock.FileLock(self.src_filepath)
         self.remote_connection = remote_connection
+        self.log_info = log_info
 
     def __enter__(self) -> None:
+        if self.log_info is not None:
+            self.log_info(
+                f'acquiring lock on local machine at "{self.src_filepath}"'
+            )
         self.src_filelock.acquire(timeout=0)
+        if self.log_info is not None:
+            self.log_info(
+                f'acquiring lock on remote server at "{self.dst_filepath}"'
+            )
         self.remote_connection.run(f"touch {self.dst_filepath}")
 
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
-        self.remote_connection.run(f"rm -r {self.dst_filepath}")
+        if self.log_info is not None:
+            self.log_info(
+                f'releasing lock on remote server at "{self.dst_filepath}"'
+            )
+        self.remote_connection.run(f"rm -rf {self.dst_filepath}")
+
+        if self.log_info is not None:
+            self.log_info(
+                f'releasing lock on local machine at "{self.src_filepath}"'
+            )
         self.src_filelock.release()
-        os.remove(self.src_filepath)
+        if os.path.isfile(self.src_filepath):
+            os.remove(self.src_filepath)

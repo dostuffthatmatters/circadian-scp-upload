@@ -52,7 +52,7 @@ class DailyTransferClient:
         self.remote_connection = remote_connection
         assert self.remote_connection.transfer_process.is_remote_dir(
             self.dst_path
-        ), f"remote {self.dst_path} is not a directory"
+        ), f'remote "{self.dst_path}" is not a directory'
         self.variant = variant
         self.callbacks = callbacks
 
@@ -73,6 +73,9 @@ class DailyTransferClient:
         )
         remote_dir_path = f"{self.dst_path}/{dir_name}"
         remote_script_path = f"{self.dst_path}/checksum.py"
+        self.callbacks.log_info(
+            f'Copying checksum script to remote server at path "{remote_script_path}"'
+        )
         self.remote_connection.transfer_process.put(
             local_script_path, remote_script_path
         )
