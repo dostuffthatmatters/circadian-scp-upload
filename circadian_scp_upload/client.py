@@ -143,8 +143,12 @@ class DailyTransferClient:
 
         # quit if no src files are found
         if len(src_files) == 0:
-            shutil.rmtree(src_dir_path)
-            log_info("finished removing source because directory is empty")
+            log_info("directory is empty")
+            if self.remove_files_after_upload:
+                shutil.rmtree(src_dir_path)
+                log_info("finished removing source")
+            else:
+                log_info("skipped removal of source")
             return "no files found"
 
         # determine file differences between src and dst
