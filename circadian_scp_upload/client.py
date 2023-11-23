@@ -10,7 +10,6 @@ import shutil
 import filelock
 import invoke
 import re
-
 import circadian_scp_upload
 
 
@@ -153,7 +152,7 @@ class DailyTransferClient:
 
         # determine file differences between src and dst
         files_missing_in_dst = src_files.difference(set(meta.uploaded_files))
-        log_info(f"{len(files_missing_in_dst)} files missing in dst")
+        log_info(f"found {len(files_missing_in_dst)} files for this date")
 
         # possibly create remote directory
         if not self.remote_connection.transfer_process.is_remote_dir(
@@ -229,7 +228,7 @@ class DailyTransferClient:
         ])
         files_missing_in_dst = src_files.difference(set(meta.uploaded_files))
         self.callbacks.log_info(
-            f"{date}: {len(files_missing_in_dst)} files missing in dst"
+            f"{date}: found {len(files_missing_in_dst)} files for this date"
         )
 
         # locking the directory both locally and remote
