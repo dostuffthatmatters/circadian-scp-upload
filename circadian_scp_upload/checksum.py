@@ -8,23 +8,26 @@ import pathlib
 
 def get_dir_checksum(path: str, file_regex: str) -> str:
     assert os.path.isdir(path), f'"{path}" is not a directory'
-    ifg_files: List[str] = []
-    for p in pathlib.Path(path).glob("*"):
-        basename = str(p).split("/")[-1]
-        if all([
-            p.is_file(),
-            basename != ".do-not-touch",
-            basename != "upload-meta.json",
-            re.match(file_regex, basename),
-        ]):
-            ifg_files.append(str(p))
+    matching_filenames: List[str] = []
+    for filename in os.listdir(path):
+        full_path = os.path.join(path, filename)
+        if (
+            os.path.isfile(full_path) and
+            (filename not in [".do-not-touch", "upload-meta.json"]) and
+            re.match(file_regex, filename)
+        ):
+            matching_filenames.append(filename)
 
     # calculate checksum over all files (sorted)
     hasher = hashlib.md5()
-    for filename in sorted(ifg_files):
+    for filename in sorted(matching_filenames):
         filepath = os.path.join(path, filename)
         with open(filepath, "rb") as f:
-            hasher.update(f.read())
+            try:
+                file_content = f.read()
+            except Exception as e:
+                raise Exception(f'Could not read file "{filepath}"') from e
+            hasher.update(file_content)
 
     return hasher.hexdigest()
 
@@ -33,7 +36,11 @@ def get_file_checksum(path: str) -> str:
     assert os.path.isfile(path), f'"{path}" is not a file'
     hasher = hashlib.md5()
     with open(path, "rb") as f:
-        hasher.update(f.read())
+        try:
+            file_content = f.read()
+        except Exception as e:
+            raise Exception(f'Could not read file "{path}"') from e
+        hasher.update(file_content)
     return hasher.hexdigest()
 
 
