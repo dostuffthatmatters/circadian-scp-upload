@@ -124,7 +124,7 @@ class DailyTransferClient:
         src_dir_path = os.path.join(self.src_path, dir_name)
         dst_dir_path = f"{self.dst_path}/{dir_name}"
         log_info(
-            f"starting to upload directory local directory '{src_dir_path}'" +
+            f"starting to upload local directory '{src_dir_path}'" +
             f" to remote directory '{dst_dir_path}'"
         )
 

@@ -135,7 +135,7 @@ class UploadMeta(pydantic.BaseModel):
     def init(src_dir_path: str) -> UploadMeta:
         src_dir_path = src_dir_path.rstrip("/")
 
-        if os.path.isfile(src_dir_path):
+        if os.path.isfile(os.path.join(src_dir_path, "upload-meta.json")):
             try:
                 with open(
                     os.path.join(src_dir_path, "upload-meta.json"), "r"
