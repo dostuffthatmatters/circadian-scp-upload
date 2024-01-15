@@ -106,7 +106,7 @@ def get_src_dates(
                 if not os.path.isfile(file_or_dir_path):
                     continue
                 if meta is not None:
-                    if file_or_dir_path in meta.uploaded_files:
+                    if file_or_dir_name in meta.uploaded_files:
                         continue
             date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
             if date is not None:
