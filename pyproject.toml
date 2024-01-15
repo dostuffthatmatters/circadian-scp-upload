@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "circadian_scp_upload"
-version = "0.4.4"
+version = "0.4.5"
 description = "Resumable, interruptible, SCP upload client for any files or directories generated day by day"
 authors = ["Moritz Makowski <moritz@dostuffthatmatters.dev>"]
 readme = "README.md"
