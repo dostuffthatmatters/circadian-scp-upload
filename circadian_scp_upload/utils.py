@@ -91,20 +91,28 @@ def get_src_dates(
 
     ambiguous_paths: list[str] = []
 
+    meta: Optional[UploadMeta] = None
+    if variant == "files":
+        meta = UploadMeta.init(src_path)
+
     for file_or_dir_name in os.listdir(src_path):
         file_or_dir_path = os.path.join(src_path, file_or_dir_name)
 
         try:
             if variant == "directories":
-                consider_path = os.path.isdir(file_or_dir_path)
+                if not os.path.isdir(file_or_dir_path):
+                    continue
             else:
-                consider_path = os.path.isfile(file_or_dir_path)
-            if consider_path:
-                date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
-                if date is not None:
-                    if date not in dates:
-                        dates[date] = []
-                    dates[date].append(file_or_dir_path)
+                if not os.path.isfile(file_or_dir_path):
+                    continue
+                if meta is not None:
+                    if file_or_dir_path in meta.uploaded_files:
+                        continue
+            date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
+            if date is not None:
+                if date not in dates:
+                    dates[date] = []
+                dates[date].append(file_or_dir_path)
         except ValueError:
             ambiguous_paths.append(file_or_dir_path)
 
