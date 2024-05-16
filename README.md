@@ -2,10 +2,10 @@
 
 **Resumable, interruptible, well-tested SCP upload client for any files or directories generated day by day.**
 
-[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/dostuffthatmatters/circadian-scp-upload/test.yaml?label=CI%20tests)](https://github.com/dostuffthatmatters/circadian-scp-upload/actions/workflows/test.yaml)
-[![GitHub](https://img.shields.io/github/license/dostuffthatmatters/circadian-scp-upload?color=4c1)](https://github.com/dostuffthatmatters/circadian-scp-upload/blob/main/LICENSE.md)
-[![PyPI - Version](https://img.shields.io/github/v/tag/dostuffthatmatters/circadian-scp-upload?label=latest%20version&color=f5f5f5)](https://pypi.org/project/circadian-scp-upload)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/circadian_scp_upload?label=supported%20Python%20versions&color=f5f5f5)](https://pypi.org/project/circadian-scp-upload)
+[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/dostuffthatmatters/circadian-scp-upload/test.yaml?label=CI%20tests&cacheSeconds=60)](https://github.com/dostuffthatmatters/circadian-scp-upload/actions/workflows/test.yaml)
+[![GitHub](https://img.shields.io/github/license/dostuffthatmatters/circadian-scp-upload?color=4c1&cacheSeconds=60)](https://github.com/dostuffthatmatters/circadian-scp-upload/blob/main/LICENSE.md)
+[![PyPI - Version](https://img.shields.io/github/v/tag/dostuffthatmatters/circadian-scp-upload?label=latest%20version&color=f5f5f5&cacheSeconds=60)](https://pypi.org/project/circadian-scp-upload)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/circadian_scp_upload?label=supported%20Python%20versions&color=f5f5f5&cacheSeconds=60)](https://pypi.org/project/circadian-scp-upload)
 
 ## Use Case
 
