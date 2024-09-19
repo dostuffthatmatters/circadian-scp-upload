@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 from typing import Any, Callable, Literal
 import datetime
 import glob
@@ -101,8 +102,8 @@ class DailyTransferClient:
 
         return local_checksum == remote_checksum
 
-    def __upload_date_directory(
-        self, date: datetime.date, dir_name: str
+    def __upload_directory(
+        self, dir_name: str
     ) -> Literal["successful", "failed", "aborted", "no files found"]:
         """Perform the whole upload process for a given directory.
 
@@ -116,32 +117,52 @@ class DailyTransferClient:
 
         log_info: Callable[
             [str],
-            None] = lambda msg: self.callbacks.log_info(f"{date}: {msg}")
+            None] = lambda msg: self.callbacks.log_info(f"{dir_name}: {msg}")
         log_error: Callable[
             [str],
-            None] = lambda msg: self.callbacks.log_error(f"{date}: {msg}")
+            None] = lambda msg: self.callbacks.log_error(f"{dir_name}: {msg}")
 
         src_dir_path = os.path.join(self.src_path, dir_name)
         dst_dir_path = f"{self.dst_path}/{dir_name}"
+        twin_lock = circadian_scp_upload.utils.TwinFileLock(
+            src_dir_path,
+            dst_dir_path,
+            self.remote_connection.connection,
+            log_info=self.callbacks.log_info
+        )
         log_info(
             f"starting to upload local directory '{src_dir_path}'" +
             f" to remote directory '{dst_dir_path}'"
         )
 
-        meta = circadian_scp_upload.utils.UploadMeta.init(
-            src_dir_path=src_dir_path
+        log_info(f"screening local directory")
+        local_directory = circadian_scp_upload.screen_directory(src_dir_path)
+
+        log_info(f"screening remote directory")
+        remote_directory = circadian_scp_upload.screen_directory(
+            dst_dir_path, self.remote_connection.connection
         )
 
-        # determine files present in src and dst directory
-        # files should be named like "<anything>YYYYMMDD<anything>"
-        src_files = set([
-            f for f in os.listdir(src_dir_path)
-            if f not in ["upload-meta.json", ".do-not-touch"]
-        ])
-        log_info(f"found {len(src_files)} files in src directory")
+        log_info(f"comparing local and remote directory")
+        files_in_sync, files_not_in_sync = circadian_scp_upload.compare_directory_screens(
+            local_directory, remote_directory
+        )
+        log_info(
+            f"found {len(files_in_sync)} synced files and {len(files_not_in_sync)} unsynced files"
+        )
+
+        if len(files_not_in_sync) == 0:
+            log_info("directories are in sync")
+            if self.remove_files_after_upload:
+                shutil.rmtree(src_dir_path)
+                log_info("finished removing source")
+            else:
+                log_info("skipped removal of source")
+            twin_lock.release()
+            return "successful"
 
         # quit if no src files are found
-        if len(src_files) == 0:
+        if len(files_in_sync) == 0:
             log_info("directory is empty")
             if self.remove_files_after_upload:
                 shutil.rmtree(src_dir_path)
@@ -150,62 +171,56 @@ class DailyTransferClient:
                 log_info("skipped removal of source")
             return "no files found"
 
-        # determine file differences between src and dst
-        files_missing_in_dst = src_files.difference(set(meta.uploaded_files))
-        log_info(f"found {len(files_missing_in_dst)} files for this date")
+        # create all subdirectories on the remote server
+        log_info("possibly creating all remote subdirectories")
+        subdirs = local_directory.get_subdirectories()
+        self.remote_connection.connection.run(
+            f"mkdir -p {' '.join(list(subdirs))}"
+        )
 
-        # possibly create remote directory
-        if not self.remote_connection.transfer_process.is_remote_dir(
-            dst_dir_path
-        ):
-            self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
-            assert self.remote_connection.transfer_process.is_remote_dir(
-                dst_dir_path
+        # logging progress
+        def _log_progress() -> None:
+            c, t = files_in_sync, files_in_sync + files_not_in_sync
+            fraction, finished = c / t, c == t
+            log_info(
+                f"{int(fraction * 100):5.1f} % " + f"({c:{len(str(t))}d}/{t})" +
+                f" uploaded {'(finished)' if finished else ''}"
             )
-            log_info(f"created remote directory")
-
-        # logging progress every 10%
-        max_file_count_characters = len(str(len(src_files)))
-        log_progress: Callable[[float], None] = lambda fraction: log_info(
-            f"{int(fraction * 100):3d} % " +
-            f"({len(meta.uploaded_files):{max_file_count_characters}d}/{len(src_files)})"
-            + f" uploaded {'(finished)' if fraction == 1 else ''}"
-        )
-
-        # locking the directory both locally and remote
-        twin_lock = circadian_scp_upload.utils.TwinFileLock(
-            src_dir_path,
-            dst_dir_path,
-            self.remote_connection.connection,
-            log_info=self.callbacks.log_info
-        )
 
         twin_lock.aquire()
-        progress: float = len(meta.uploaded_files) / len(src_files)
 
         # upload every file that is missing in the remote
         # meta but present in the local directory
-        for f in sorted(files_missing_in_dst):
+        last_log_time = time.time()
+        for f in sorted(list(files_not_in_sync)):
             self.remote_connection.transfer_process.put(
-                os.path.join(src_dir_path, f), f"{dst_dir_path}/{f}"
+                os.path.join(src_dir_path, f[2 :]), f"{dst_dir_path}/{f[2:]}"
             )
-            meta.uploaded_files.append(f)
-            meta.dump()
-            new_progress = len(meta.uploaded_files) / len(src_files)
-            if math.floor(new_progress * 10) != math.floor(progress * 10):
-                log_progress(progress)
-                if self.callbacks.should_abort_upload():
-                    return "aborted"
-            progress = new_progress
+            files_not_in_sync.remove(f)
+            files_in_sync.add(f)
 
-        log_progress(1)
+            if ((time.time() - last_log_time)
+                > 60) or (len(files_not_in_sync) == 0):
+                _log_progress()
+                last_log_time = time.time()
 
-        # raise an exception if the checksums do not match
-        if not self.__directory_checksums_match(dir_name):
-            log_error("checksums do not match")
+            if self.callbacks.should_abort_upload():
+                return "aborted"
+
+        # compute remote checksum again
+        remote_directory = circadian_scp_upload.screen_directory(
+            dst_dir_path, self.remote_connection.connection
+        )
+        updated_files_in_sync, updated_files_not_in_sync = circadian_scp_upload.compare_directory_screens(
+            local_directory, remote_directory
+        )
+        assert len(files_not_in_sync) == 0, "This should not happen"
+        assert files_in_sync == updated_files_in_sync, "This should not happen"
+        if len(updated_files_not_in_sync) > 0:
+            log_error(
+                f"upload is not complete, some files are missing ({updated_files_not_in_sync})"
+            )
             return "failed"
-        else:
-            log_info("checksums match")
 
         # only remove src if configured and checksums match
         if self.remove_files_after_upload:
