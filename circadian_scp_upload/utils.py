@@ -218,23 +218,23 @@ class TwinFileLock:
         self.src_filepath = os.path.join(local_dir_path, ".do-not-touch")
         self.dst_filepath = f"{remote_dir_path}/.do-not-touch"
 
-        self.src_filelock = filelock.FileLock(self.src_filepath)
         self.remote_connection = remote_connection
         self.log_info = log_info
 
-    def __enter__(self) -> None:
+    def aquire(self) -> None:
         if self.log_info is not None:
             self.log_info(
                 f'acquiring lock on local machine at "{self.src_filepath}"'
             )
-        self.src_filelock.acquire(timeout=0)
+        with open(self.src_filepath, "w") as f:
+            f.write("locked by circadian_scp_upload")
         if self.log_info is not None:
             self.log_info(
                 f'acquiring lock on remote server at "{self.dst_filepath}"'
             )
         self.remote_connection.run(f"touch {self.dst_filepath}")
 
-    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+    def release(self) -> None:
         if self.log_info is not None:
             self.log_info(
                 f'releasing lock on remote server at "{self.dst_filepath}"'
@@ -245,6 +245,5 @@ class TwinFileLock:
             self.log_info(
                 f'releasing lock on local machine at "{self.src_filepath}"'
             )
-        self.src_filelock.release()
         if os.path.isfile(self.src_filepath):
             os.remove(self.src_filepath)

@@ -173,37 +173,39 @@ class DailyTransferClient:
         )
 
         # locking the directory both locally and remote
-        with circadian_scp_upload.utils.TwinFileLock(
+        twin_lock = circadian_scp_upload.utils.TwinFileLock(
             src_dir_path,
             dst_dir_path,
             self.remote_connection.connection,
             log_info=self.callbacks.log_info
-        ):
-            progress: float = len(meta.uploaded_files) / len(src_files)
+        )
 
-            # upload every file that is missing in the remote
-            # meta but present in the local directory
-            for f in sorted(files_missing_in_dst):
-                self.remote_connection.transfer_process.put(
-                    os.path.join(src_dir_path, f), f"{dst_dir_path}/{f}"
-                )
-                meta.uploaded_files.append(f)
-                meta.dump()
-                new_progress = len(meta.uploaded_files) / len(src_files)
-                if math.floor(new_progress * 10) != math.floor(progress * 10):
-                    log_progress(progress)
-                    if self.callbacks.should_abort_upload():
-                        return "aborted"
-                progress = new_progress
+        twin_lock.aquire()
+        progress: float = len(meta.uploaded_files) / len(src_files)
 
-            log_progress(1)
+        # upload every file that is missing in the remote
+        # meta but present in the local directory
+        for f in sorted(files_missing_in_dst):
+            self.remote_connection.transfer_process.put(
+                os.path.join(src_dir_path, f), f"{dst_dir_path}/{f}"
+            )
+            meta.uploaded_files.append(f)
+            meta.dump()
+            new_progress = len(meta.uploaded_files) / len(src_files)
+            if math.floor(new_progress * 10) != math.floor(progress * 10):
+                log_progress(progress)
+                if self.callbacks.should_abort_upload():
+                    return "aborted"
+            progress = new_progress
 
-            # raise an exception if the checksums do not match
-            if not self.__directory_checksums_match(dir_name):
-                log_error("checksums do not match")
-                return "failed"
-            else:
-                log_info("checksums match")
+        log_progress(1)
+
+        # raise an exception if the checksums do not match
+        if not self.__directory_checksums_match(dir_name):
+            log_error("checksums do not match")
+            return "failed"
+        else:
+            log_info("checksums match")
 
         # only remove src if configured and checksums match
         if self.remove_files_after_upload:
@@ -211,6 +213,8 @@ class DailyTransferClient:
             log_info("finished removing source")
         else:
             log_info("skipped removal of source")
+
+        twin_lock.release()
 
         return "successful"
 
@@ -232,23 +236,28 @@ class DailyTransferClient:
         )
 
         # locking the directory both locally and remote
-        with circadian_scp_upload.utils.TwinFileLock(
+        twin_lock = circadian_scp_upload.utils.TwinFileLock(
             self.src_path,
             self.dst_path,
             self.remote_connection.connection,
             log_info=self.callbacks.log_info
-        ):
-            # upload every file that is missing in the remote
-            # meta but present in the local directory
-            for f in sorted(files_missing_in_dst):
-                self.remote_connection.transfer_process.put(
-                    os.path.join(self.src_path, f),
-                    f"{self.dst_path}/{f}",
-                )
-                if self.remove_files_after_upload:
-                    os.remove(os.path.join(self.src_path, f))
-                meta.uploaded_files.append(f)
-                meta.dump()
+        )
+
+        twin_lock.aquire()
+
+        # upload every file that is missing in the remote
+        # meta but present in the local directory
+        for f in sorted(files_missing_in_dst):
+            self.remote_connection.transfer_process.put(
+                os.path.join(self.src_path, f),
+                f"{self.dst_path}/{f}",
+            )
+            if self.remove_files_after_upload:
+                os.remove(os.path.join(self.src_path, f))
+            meta.uploaded_files.append(f)
+            meta.dump()
+
+        twin_lock.release()
 
         return "successful"
 
