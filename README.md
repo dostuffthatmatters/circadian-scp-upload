@@ -33,7 +33,7 @@ Or like this:
 └── 📄 20190103.txt
 ```
 
-You want to upload that data to a server, but only after the day of creation. Additionally, you want to mark the directories as "in progress" on the remote server so that subsequent processing steps will not touch unfinished days of data while uploading.
+You want to **upload that data to a server, but only after the day of creation**. Additionally, you want to mark the directories as "in progress" on the remote server so that subsequent processing steps will not touch unfinished days of data while uploading. After the upload has finished, you want to remove the local files (this is optional).
 
 This tool uses [SCP](https://en.wikipedia.org/wiki/Secure_copy_protocol) via the Python library [paramiko](https://github.com/paramiko/paramiko) to do that. It will write files named `.do-not-touch` in the local and remote directories during the upload process and delete them afterward.
 
@@ -41,9 +41,9 @@ Below is a code snippet that defines a specific directory/file naming scheme (fo
 
 **Can't I use `rsync` or a similar CLI tool for that?**
 
-Yes, of course. However, the actual copying logic of individual files or directories is just 130 lines of code of this repository. The rest of this library is dedicated to being a plug-and-play solution for any Python codebase: logging, regex filters, being interruptable, in-progress markers, and so on.
+Yes, of course. However, the actual copying logic of individual files or directories is just ~ 100 lines of code of this repository. The rest of this library is dedicated to being a plug-and-play solution for any Python codebase: logging, regex filters, being interruptable, in-progress markers, removing the local files after the checksums of local and remote directories are identical, etc.
 
-One should be able to `pip install`/`poetry add`/... and call a well-documented and typed upload client class instead of manually connecting each codebase to rsync and doing all the pattern and scheduling logic repeatedly.
+One should be able to `pip install`/`pdm add`/... and call a well-documented and typed upload client class instead of manually connecting each codebase to rsync and doing all the pattern and scheduling logic repeatedly.
 
 **How do you make sure that the upload works correctly?**
 
@@ -62,7 +62,7 @@ Install into any Python `^3.10` project:
 ```bash
 pip install circadian_scp_upload
 # or
-poetry add circadian_scp_upload
+pdm add circadian_scp_upload
 ```
 
 Configure and use the upload client:
@@ -116,35 +116,37 @@ with circadian_scp_upload.RemoteConnection(
     ).run()
 ```
 
-The client will produce an informational output wherever one directs the log output - the progress is only logged at steps of 10%:
+The client will produce an informational output wherever one directs the log output:
 
 ```log
-INFO - 2005-06-20: found 1 paths for this date: ['/tmp/circadian_scp_upload_test_1693053096_3.10.12/20050620']
-INFO - 2005-06-20: starting to upload directory local directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20050620' to remote directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20050620'
-INFO - 2005-06-20: found 5 files in src directory
-INFO - 2005-06-20: 5 files missing in dst
-INFO - 2005-06-20: created remote directory
-INFO - 2005-06-20:   0 % (1/5) uploaded
-INFO - 2005-06-20:  20 % (2/5) uploaded
-INFO - 2005-06-20:  40 % (3/5) uploaded
-INFO - 2005-06-20:  60 % (4/5) uploaded
-INFO - 2005-06-20:  80 % (5/5) uploaded
-INFO - 2005-06-20: 100 % (5/5) uploaded (finished)
-INFO - 2005-06-20: checksums match
-INFO - 2005-06-20: finished removing source
-INFO - 2005-06-20: done (successful)
-INFO - 2023-08-23: found 1 paths for this date: ['/tmp/circadian_scp_upload_test_1693053096_3.10.12/20230823']
-INFO - 2023-08-23: starting to upload directory local directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20230823' to remote directory '/tmp/circadian_scp_upload_test_1693053096_3.10.12/20230823'
-INFO - 2023-08-23: found 5 files in src directory
-INFO - 2023-08-23: 5 files missing in dst
-INFO - 2023-08-23: created remote directory
-INFO - 2023-08-23:   0 % (1/5) uploaded
-INFO - 2023-08-23:  20 % (2/5) uploaded
-INFO - 2023-08-23:  40 % (3/5) uploaded
-INFO - 2023-08-23:  60 % (4/5) uploaded
-INFO - 2023-08-23:  80 % (5/5) uploaded
-INFO - 2023-08-23: 100 % (5/5) uploaded (finished)
-INFO - 2023-08-23: checksums match
-INFO - 2023-08-23: finished removing source
-INFO - 2023-08-23: done (successful)
+INFO - 2024-09-17: starting to upload local directory '/tmp/circadian_scp_upload_test/2024-09-17' to remote directory '/tmp/circadian_scp_upload_test/2024-09-17'
+INFO - 2024-09-17: screening local directory
+INFO - 2024-09-17: possibly creating remote directory
+INFO - 2024-09-17: screening remote directory
+INFO - 2024-09-17: comparing local and remote directory
+INFO - 2024-09-17: found 0 synced files and 4 unsynced files
+INFO - 2024-09-17: possibly creating all remote subdirectories
+INFO - 2024-09-17: acquiring lock on local machine at "/tmp/circadian_scp_upload_test/2024-09-17/.do-not-touch"
+INFO - 2024-09-17: acquiring lock on remote server at "/tmp/circadian_scp_upload_test/2024-09-17/.do-not-touch"
+INFO - 2024-09-17: 100.0 % (4/4) uploaded (finished)
+INFO - 2024-09-17: finished removing source
+INFO - 2024-09-17: releasing lock on remote server at "/tmp/circadian_scp_upload_test/2024-09-17/.do-not-touch"
+INFO - 2024-09-17: releasing lock on local machine at "/tmp/circadian_scp_upload_test/2024-09-17/.do-not-touch"
+INFO - 2024-09-17: done (successful)
+INFO - 2024-09-18: starting to upload local directory '/tmp/circadian_scp_upload_test/2024-09-18' to remote directory '/tmp/circadian_scp_upload_test/2024-09-18'
+INFO - 2024-09-18: screening local directory
+INFO - 2024-09-18: possibly creating remote directory
+INFO - 2024-09-18: screening remote directory
+INFO - 2024-09-18: comparing local and remote directory
+INFO - 2024-09-18: found 0 synced files and 5 unsynced files
+INFO - 2024-09-18: possibly creating all remote subdirectories
+INFO - 2024-09-18: acquiring lock on local machine at "/tmp/circadian_scp_upload_test/2024-09-18/.do-not-touch"
+INFO - 2024-09-18: acquiring lock on remote server at "/tmp/circadian_scp_upload_test/2024-09-18/.do-not-touch"
+INFO - 2024-09-18: 100.0 % (5/5) uploaded (finished)
+INFO - 2024-09-18: finished removing source
+INFO - 2024-09-18: releasing lock on remote server at "/tmp/circadian_scp_upload_test/2024-09-18/.do-not-touch"
+INFO - 2024-09-18: releasing lock on local machine at "/tmp/circadian_scp_upload_test/2024-09-18/.do-not-touch"
+INFO - 2024-09-18: done (successful)
 ```
+
+If the upload takes longer than 1 minute, it logs its progress (e.g. ` 40.0 % (3/5) uploaded`) every minute.
