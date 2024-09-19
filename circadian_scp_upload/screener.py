@@ -88,7 +88,7 @@ def screen_directory(
         stdout = local_result.stdout.decode().strip(" \t\n")
     else:
         remote_result: Optional[invoke.runners.Result
-                               ] = remote_connection.run(command)
+                               ] = remote_connection.run(command, hide="both")
         assert remote_result is not None, "Failed to list files"
         assert remote_result.ok, f"Failed to list files: {remote_result.stderr}"
         stdout = remote_result.stdout.strip(" \t\n")

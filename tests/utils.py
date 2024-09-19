@@ -37,6 +37,7 @@ def generate_random_dated_regexes() -> List[str]:
         random.shuffle(specifiers)
         dr.append(f"{a}{specifiers[0]}{b}{specifiers[1]}{c}{specifiers[2]}.*")
 
+    #dr.append("%Y-%m-%d.*")
     return list(set(dr))
 
 

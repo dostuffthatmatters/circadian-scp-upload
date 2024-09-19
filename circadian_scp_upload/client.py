@@ -77,7 +77,7 @@ class DailyTransferClient:
             src_dir_path,
             dst_dir_path,
             self.remote_connection.connection,
-            log_info=self.callbacks.log_info
+            log_info=log_info
         )
         log_info(
             f"starting to upload local directory '{src_dir_path}'" +
@@ -274,7 +274,6 @@ class DailyTransferClient:
 
         if self.variant == "directories":
             for item in src_items:
-                self.callbacks.log_info(f"{item}: starting")
                 result = self.__upload_directory(item)
                 self.callbacks.log_info(f"{item}: done ({result})")
                 if result == "aborted":
