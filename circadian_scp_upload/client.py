@@ -87,6 +87,9 @@ class DailyTransferClient:
         log_info(f"screening local directory")
         local_directory = circadian_scp_upload.screen_directory(src_dir_path)
 
+        log_info("possibly creating remote directory")
+        self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
+
         log_info(f"screening remote directory")
         remote_directory = circadian_scp_upload.screen_directory(
             dst_dir_path, self.remote_connection.connection
@@ -111,7 +114,7 @@ class DailyTransferClient:
             return "successful"
 
         # quit if no src files are found
-        if len(files_in_sync) == 0:
+        if len(files_in_sync.union(files_not_in_sync)) == 0:
             log_info("directory is empty")
             if self.remove_files_after_upload:
                 shutil.rmtree(src_dir_path)
@@ -122,11 +125,13 @@ class DailyTransferClient:
 
         # create all subdirectories on the remote server
         log_info("possibly creating all remote subdirectories")
-        subdirs = [dst_dir_path] + [
-            f"{dst_dir_path}/{p}" for p in local_directory.get_subdirectories()
-        ]
         self.remote_connection.connection.run(
-            f"mkdir -p {' '.join(list(subdirs))}"
+            f"mkdir -p " + (
+                " ".join([
+                    f"{dst_dir_path}/{p}"
+                    for p in local_directory.get_subdirectories()
+                ])
+            )
         )
 
         # logging progress
