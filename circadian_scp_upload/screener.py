@@ -11,29 +11,37 @@ class Directory(pydantic.BaseModel):
         ..., description="Files in the directory"
     )
 
-    def get_subdirectories(self) -> list[str]:
-        subdirs: set[str] = []
+    def get_subdirectories(self) -> set[str]:
+        subdirs: set[str] = set()
         for file in self.files:
             subdir = file.subdirectory()
             if subdir is not None:
-                tmp_sd = subdir
-                subdirs.add(tmp_sd)
-                while "/" in tmp_sd:
-                    tmp_sd = "/".join(tmp_sd.split("/")[:-1])
-                    subdirs.add(tmp_sd)
+                subdirs.add(subdir)
 
         # sorting alphabetically will also put the parent directories first
-        return sorted(list(subdirs))
+        return subdirs
+
+    def filter_by_filenames(self, relevant_filenames: set[str]) -> None:
+        self.files = [
+            file
+            for file in self.files if file.relative_path in relevant_filenames
+        ]
 
 
 class File(pydantic.BaseModel):
     filesize: int = pydantic.Field(..., description="Size of the file in bytes")
     md5sum: str = pydantic.Field(..., description="MD5 checksum of the file")
     relative_path: str = pydantic.Field(
-        ...,
-        description="Path of the file relative to the root directory",
-        pattern=r"\./.*"
+        ..., description="Path of the file relative to the root directory"
     )
+
+    @pydantic.model_validator(mode="after")
+    def _validate(self) -> File:
+        if self.relative_path.startswith("./"):
+            raise ValueError("relative_path should not start with './'")
+        if self.relative_path.startswith("/"):
+            raise ValueError("relative_path should not start with '/'")
+        return self
 
     def __eq__(self, other: File) -> bool:
         return ((self.filesize == other.filesize) and
@@ -49,7 +57,7 @@ class File(pydantic.BaseModel):
         if file_depth == 1:
             return None
         else:
-            return "/".join((self.relative_path[2 :].split("/")[:-1]))
+            return "/".join((self.relative_path.split("/")[:-1]))
 
 
 def screen_directory(
@@ -75,7 +83,7 @@ def screen_directory(
         assert remote_result.ok, f"Failed to list files: {remote_result.stderr}"
         stdout = remote_result.stdout.strip(" \t\n")
 
-    lines = [l for l in stdout.split("\n") if ".do-not-touch" not in l]
+    lines = stdout.split("\n")
     assert lines[-1] == "--- done ---", "Command did not finish"
     files: set[File] = set()
     for line in lines[:-1]:
@@ -83,9 +91,32 @@ def screen_directory(
         assert len(splitted) == 3, f"Unexpected line: {line}"
         filesize = int(splitted[0])
         md5sum = splitted[1]
-        relative_path = splitted[2]
-        files.add(
-            File(filesize=filesize, md5sum=md5sum, relative_path=relative_path)
-        )
+        relative_path = splitted[2][2 :]
+        if relative_path not in [".do-not-touch", "upload-meta.json"]:
+            files.add(
+                File(
+                    filesize=filesize,
+                    md5sum=md5sum,
+                    relative_path=relative_path
+                )
+            )
 
     return Directory(files=sorted(list(files)))
+
+
+def compare_directory_screens(
+    src_dir: Directory, dst_dir: Directory
+) -> tuple[set[File], set[File]]:
+    """Compare two directory screens and return the differences.
+    
+    Returns:
+        A tuple of two sets (1. files that are in sync, 2. files that are not in sync)
+    """
+
+    src_files = set(src_dir.files)
+    dst_files = set(dst_dir.files)
+
+    in_sync = src_files.intersection(dst_files)
+    not_in_sync = src_files - dst_files
+
+    return in_sync, not_in_sync

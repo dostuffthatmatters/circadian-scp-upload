@@ -1,6 +1,6 @@
 from __future__ import annotations
-import time
 from typing import Any, Callable, Literal
+import time
 import glob
 import fabric.connection
 import fabric.transfer
@@ -62,8 +62,7 @@ class DailyTransferClient:
         4. Upload every file that is found locally but has not been uploaded yet
         5. Test whether the checksums of "files on server" and "local ifgs"
            are equal, raise an exception (and end the function) if they differ
-        6. Remove the remote meta file
-        7. Optionally remove local ifgs"""
+        7. Optionally remove the local directory"""
 
         log_info: Callable[
             [str],
@@ -123,7 +122,9 @@ class DailyTransferClient:
 
         # create all subdirectories on the remote server
         log_info("possibly creating all remote subdirectories")
-        subdirs = local_directory.get_subdirectories()
+        subdirs = [dst_dir_path] + [
+            f"{dst_dir_path}/{p}" for p in local_directory.get_subdirectories()
+        ]
         self.remote_connection.connection.run(
             f"mkdir -p {' '.join(list(subdirs))}"
         )
@@ -144,7 +145,7 @@ class DailyTransferClient:
         last_log_time = time.time()
         for f in sorted(list(files_not_in_sync)):
             self.remote_connection.transfer_process.put(
-                os.path.join(src_dir_path, f[2 :]), f"{dst_dir_path}/{f[2:]}"
+                os.path.join(src_dir_path, f), f"{dst_dir_path}/{f}"
             )
             files_not_in_sync.remove(f)
             files_in_sync.add(f)
@@ -253,7 +254,8 @@ class DailyTransferClient:
 
     def run(self) -> None:
         self.block_if_process_is_already_running()
-        src_dates = circadian_scp_upload.utils.get_src_dates(
+
+        src_items = circadian_scp_upload.list_src_items(
             self.src_path, self.variant, self.callbacks.dated_regex
         )
         self.callbacks.log_info(
@@ -261,26 +263,17 @@ class DailyTransferClient:
             f"the regex {self.callbacks.dated_regex}"
         )
         self.callbacks.log_info(
-            f"Found {len(src_dates)} date(s) to be uploaded: {src_dates}"
+            f"Found {len(src_items)} item(s) to be uploaded: {src_items}"
         )
 
-        for date, paths in src_dates.items():
-            if self.variant == "directories":
-                self.callbacks.log_info(
-                    f"{date}: found {len(paths)} paths for this date: {paths}"
-                )
-                for path in paths:
-                    result = self.__upload_date_directory(
-                        date, os.path.basename(path)
-                    )
-                    self.callbacks.log_info(f"{date}: done ({result})")
-                    if result == "aborted":
-                        break
-
-            elif self.variant == "files":
-                result = self.__upload_date_files(date)
-                self.callbacks.log_info(f"{date}: done ({result})")
-
-            if self.callbacks.should_abort_upload():
-                self.callbacks.log_info("Aborting upload")
-                break
+        if self.variant == "directories":
+            for item in src_items:
+                self.callbacks.log_info(f"{item}: starting")
+                result = self.__upload_directory(item)
+                self.callbacks.log_info(f"{item}: done ({result})")
+                if result == "aborted":
+                    break
+        else:
+            self.callbacks.log_info("starting")
+            result = self.__upload_files(set(src_items))
+            self.callbacks.log_info("done ({result})")

@@ -106,7 +106,7 @@ def list_src_items(
             "result is ambiguous (can be produced on more than one date): [\n" +
             ",\n".join(ambiguous_items) + "\n]"
         )
-    return considered_items
+    return sorted(considered_items)
 
 
 class UploadClientCallbacks(pydantic.BaseModel):
