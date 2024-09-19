@@ -58,6 +58,9 @@ class File(pydantic.BaseModel):
     def __str__(self) -> str:
         return f"{self.relative_path} S{self.filesize} #{self.md5sum}"
 
+    def __hash__(self) -> int:
+        return hash((self.relative_path, self.filesize, self.md5sum))
+
     def subdirectory(self) -> Optional[str]:
         file_depth = self.relative_path.count("/")
         # depth of 1 means that the file is in the root directory

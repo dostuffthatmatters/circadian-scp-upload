@@ -277,4 +277,4 @@ class DailyTransferClient:
         else:
             self.callbacks.log_info("starting")
             result = self.__upload_files(set(src_items))
-            self.callbacks.log_info("done ({result})")
+            self.callbacks.log_info(f"done ({result})")
