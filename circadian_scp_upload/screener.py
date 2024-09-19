@@ -43,10 +43,17 @@ class File(pydantic.BaseModel):
             raise ValueError("relative_path should not start with '/'")
         return self
 
-    def __eq__(self, other: File) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, File):
+            return False
         return ((self.filesize == other.filesize) and
                 (self.md5sum == other.md5sum) and
                 (self.relative_path == other.relative_path))
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, File):
+            return False
+        return self.relative_path < other.relative_path
 
     def __str__(self) -> str:
         return f"{self.relative_path} S{self.filesize} #{self.md5sum}"

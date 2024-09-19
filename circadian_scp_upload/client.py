@@ -131,7 +131,7 @@ class DailyTransferClient:
 
         # logging progress
         def _log_progress() -> None:
-            c, t = files_in_sync, files_in_sync + files_not_in_sync
+            c, t = len(files_in_sync), len(local_directory.files)
             fraction, finished = c / t, c == t
             log_info(
                 f"{int(fraction * 100):5.1f} % " + f"({c:{len(str(t))}d}/{t})" +
@@ -145,7 +145,8 @@ class DailyTransferClient:
         last_log_time = time.time()
         for f in sorted(list(files_not_in_sync)):
             self.remote_connection.transfer_process.put(
-                os.path.join(src_dir_path, f), f"{dst_dir_path}/{f}"
+                os.path.join(src_dir_path, f.relative_path),
+                f"{dst_dir_path}/{f.relative_path}"
             )
             files_not_in_sync.remove(f)
             files_in_sync.add(f)
@@ -223,15 +224,15 @@ class DailyTransferClient:
 
         # upload every file that is missing in the remote
         # meta but present in the local directory
-        for f in sorted(files_not_in_sync):
+        for f in sorted(list(files_not_in_sync)):
             self.callbacks.log_info(f"uploading {f.relative_path}")
             self.remote_connection.transfer_process.put(
-                os.path.join(self.src_path, f),
-                f"{self.dst_path}/{f}",
+                os.path.join(self.src_path, f.relative_path),
+                f"{self.dst_path}/{f.relative_path}",
             )
             if self.remove_files_after_upload:
                 self.callbacks.log_info(f"removing local {f.relative_path}")
-                os.remove(os.path.join(self.src_path, f))
+                os.remove(os.path.join(self.src_path, f.relative_path))
 
         twin_lock.release()
 
