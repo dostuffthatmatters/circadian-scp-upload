@@ -1,15 +1,14 @@
 from __future__ import annotations
-from typing import Any, Callable, List, Literal, Optional
-import json
+from typing import Callable, Literal, Optional
 import os
 import re
 import datetime
 import pydantic
-import filelock
+import tum_esm_utils
 import fabric.connection
 
 
-def filename_is_ambiguous_for_dated_regex(regex: str, filename: str) -> bool:
+def _filename_is_ambiguous_for_dated_regex(regex: str, filename: str) -> bool:
     """Returns true if the filename matches the dated regex more than once.
 
     This happens when this filename could have been produced on more than one
@@ -33,7 +32,7 @@ def filename_is_ambiguous_for_dated_regex(regex: str, filename: str) -> bool:
     return len(set(matches)) > 1
 
 
-def file_or_dir_name_to_date(
+def _file_or_dir_name_to_date(
     file_or_dir_name: str,
     dated_regex: str,
 ) -> Optional[datetime.date]:
@@ -58,7 +57,7 @@ def file_or_dir_name_to_date(
     }.items():
         regex = regex.replace(old, new)
 
-    if filename_is_ambiguous_for_dated_regex(regex, file_or_dir_name):
+    if _filename_is_ambiguous_for_dated_regex(regex, file_or_dir_name):
         raise ValueError()
 
     matches = re.findall(regex, file_or_dir_name)
@@ -77,89 +76,37 @@ def file_or_dir_name_to_date(
         return None
 
 
-def get_src_dates(
+def list_src_items(
     src_path: str,
     variant: Literal["directories", "files"],
     dated_regex: str,
-) -> dict[datetime.date, list[str]]:
-    """For a given src path and dated regex,returns"""
-
-    dates: dict[datetime.date, list[str]] = {}
-
-    if not os.path.isdir(src_path):
-        raise Exception(f'path "{src_path}" is not a directory')
-
-    ambiguous_paths: list[str] = []
-
-    meta: Optional[UploadMeta] = None
-    if variant == "files":
-        meta = UploadMeta.init(src_path)
-
-    for file_or_dir_name in os.listdir(src_path):
-        file_or_dir_path = os.path.join(src_path, file_or_dir_name)
-
+) -> list[str]:
+    max_date = (datetime.datetime.now() - datetime.timedelta(hours=25)).date()
+    all_items = tum_esm_utils.files.list_directory(
+        src_path,
+        include_directories=(variant == "directories"),
+        include_files=(variant == "files"),
+        include_links=False,
+    )
+    ambiguous_items: list[str] = []
+    considered_items: list[str] = []
+    for item in all_items:
         try:
-            if variant == "directories":
-                if not os.path.isdir(file_or_dir_path):
-                    continue
-            else:
-                if not os.path.isfile(file_or_dir_path):
-                    continue
-                if meta is not None:
-                    if file_or_dir_path in meta.uploaded_files:
-                        continue
-            date = file_or_dir_name_to_date(file_or_dir_name, dated_regex)
-            if date is not None:
-                if date not in dates:
-                    dates[date] = []
-                dates[date].append(file_or_dir_path)
+            date = _file_or_dir_name_to_date(item, dated_regex)
         except ValueError:
-            ambiguous_paths.append(file_or_dir_path)
+            ambiguous_items.append(item)
+            continue
+        if (date is not None) and (date <= max_date):
+            considered_items.append(item)
 
-    if len(ambiguous_paths) > 0:
+    if len(ambiguous_items) > 0:
         raise ValueError(
-            f"The following {variant} match the regex `{repr(dated_regex)}` but cannot be "
-            +
-            f"parsed with parsed into a valid date because the result is ambiguous (can "
-            + "be produced on more than one date): [\n" +
-            ",\n".join(ambiguous_paths) + "\n]"
+            f"The following {variant} match the regex `{repr(dated_regex)}` " +
+            f"but cannot be parsed with parsed into a valid date because the " +
+            "result is ambiguous (can be produced on more than one date): [\n" +
+            ",\n".join(ambiguous_items) + "\n]"
         )
-
-    return dates
-
-
-class UploadMeta(pydantic.BaseModel):
-    src_dir_path: str
-    uploaded_files: List[str]
-
-    def dump(self) -> None:
-        """dumps the meta object to a JSON file"""
-        with open(
-            os.path.join(self.src_dir_path, "upload-meta.json"), "w"
-        ) as f:
-            json.dump(self.model_dump(exclude={"src_dir_path"}), f, indent=4)
-
-    @staticmethod
-    def init(src_dir_path: str) -> UploadMeta:
-        src_dir_path = src_dir_path.rstrip("/")
-
-        if os.path.isfile(os.path.join(src_dir_path, "upload-meta.json")):
-            try:
-                with open(
-                    os.path.join(src_dir_path, "upload-meta.json"), "r"
-                ) as f:
-                    meta = UploadMeta(src_dir_path=src_dir_path, **json.load(f))
-            except (
-                FileNotFoundError,
-                TypeError,
-                json.JSONDecodeError,
-                pydantic.ValidationError,
-            ):
-                raise Exception("could not load local upload-meta.json")
-        else:
-            meta = UploadMeta(src_dir_path=src_dir_path, uploaded_files=[])
-
-        return meta
+    return considered_items
 
 
 class UploadClientCallbacks(pydantic.BaseModel):
@@ -217,7 +164,6 @@ class TwinFileLock:
     ):
         self.src_filepath = os.path.join(local_dir_path, ".do-not-touch")
         self.dst_filepath = f"{remote_dir_path}/.do-not-touch"
-
         self.remote_connection = remote_connection
         self.log_info = log_info
 
