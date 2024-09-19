@@ -233,44 +233,54 @@ class DailyTransferClient:
 
         return "successful"
 
-    def __upload_date_files(
-        self, date: datetime.date
+    def __upload_files(
+        self,
+        considered_filenames: set[str],
     ) -> Literal["successful", "failed"]:
-        meta = circadian_scp_upload.utils.UploadMeta.init(
-            src_dir_path=self.src_path
+
+        self.callbacks.log_info(f"screening local directory")
+        local_directory = circadian_scp_upload.screen_directory(
+            self.src_path, max_depth=1
+        )
+        local_directory.filter_by_filenames(considered_filenames)
+
+        self.callbacks.log_info(f"screening remote directory")
+        remote_directory = circadian_scp_upload.screen_directory(
+            self.dst_path, self.remote_connection.connection, max_depth=1
         )
 
-        # determine file differences between src and dst
-        file_regex = date.strftime(self.callbacks.dated_regex)
-        src_files = set([
-            f for f in os.listdir(self.src_path) if re.match(file_regex, f)
-        ])
-        files_missing_in_dst = src_files.difference(set(meta.uploaded_files))
+        self.callbacks.log_info(f"comparing local and remote directory")
+        files_in_sync, files_not_in_sync = circadian_scp_upload.compare_directory_screens(
+            local_directory, remote_directory
+        )
         self.callbacks.log_info(
-            f"{date}: found {len(files_missing_in_dst)} files for this date"
+            f"found {len(files_in_sync)} synced files and {len(files_not_in_sync)} unsynced files"
         )
 
-        # locking the directory both locally and remote
+        if self.remove_files_after_upload:
+            self.callbacks.log_info("removing files that are in sync")
+            for f in files_in_sync:
+                os.remove(os.path.join(self.src_path, f.relative_path))
+
         twin_lock = circadian_scp_upload.utils.TwinFileLock(
             self.src_path,
             self.dst_path,
             self.remote_connection.connection,
             log_info=self.callbacks.log_info
         )
-
         twin_lock.aquire()
 
         # upload every file that is missing in the remote
         # meta but present in the local directory
-        for f in sorted(files_missing_in_dst):
+        for f in sorted(files_not_in_sync):
+            self.callbacks.log_info(f"uploading {f.relative_path}")
             self.remote_connection.transfer_process.put(
                 os.path.join(self.src_path, f),
                 f"{self.dst_path}/{f}",
             )
             if self.remove_files_after_upload:
+                self.callbacks.log_info(f"removing local {f.relative_path}")
                 os.remove(os.path.join(self.src_path, f))
-            meta.uploaded_files.append(f)
-            meta.dump()
 
         twin_lock.release()
 
