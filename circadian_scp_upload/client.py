@@ -1,16 +1,12 @@
 from __future__ import annotations
 import time
 from typing import Any, Callable, Literal
-import datetime
 import glob
-import math
 import fabric.connection
 import fabric.transfer
 import os
 import shutil
 import filelock
-import invoke
-import re
 import circadian_scp_upload
 
 
@@ -55,52 +51,6 @@ class DailyTransferClient:
         ), f'remote "{self.dst_path}" is not a directory'
         self.variant = variant
         self.callbacks = callbacks
-
-    def __directory_checksums_match(self, dir_name: str) -> bool:
-        """Use `hashlib` to generate a checksum for the local and the
-        remote directory. The remote checksum will be calculated by
-        copying a script to the remote server and executing it there.
-
-        This script requires the server to have Python 3.10 installed
-        and will raise an exception if its not present."""
-
-        file_regex = "^.*$"
-        local_checksum = circadian_scp_upload.checksum.get_dir_checksum(
-            os.path.join(self.src_path, dir_name), file_regex
-        )
-        local_script_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "checksum.py"
-        )
-        remote_dir_path = f"{self.dst_path}/{dir_name}"
-        remote_script_path = f"{self.dst_path}/checksum.py"
-        self.callbacks.log_info(
-            f'Copying checksum script to remote server at path "{remote_script_path}"'
-        )
-        self.remote_connection.transfer_process.put(
-            local_script_path, remote_script_path
-        )
-
-        try:
-            self.remote_connection.connection.run(
-                "python3.10 --version", hide=True, in_stream=False
-            )
-        except invoke.exceptions.UnexpectedExit:
-            raise Exception("python3.10 is not installed on the server")
-
-        try:
-            remote_command = f'python3.10 {remote_script_path} --file_regex "{file_regex}" "{remote_dir_path}"'
-            a: invoke.runners.Result = self.remote_connection.connection.run(
-                remote_command, hide=True, in_stream=False
-            )
-            assert a.exited == 0
-            remote_checksum = a.stdout.strip()
-            assert isinstance(remote_checksum, str)
-        except (invoke.exceptions.UnexpectedExit, AssertionError) as e:
-            raise Exception(
-                f"could not execute remote command on server ({remote_command}): {e}"
-            )
-
-        return local_checksum == remote_checksum
 
     def __upload_directory(
         self, dir_name: str
