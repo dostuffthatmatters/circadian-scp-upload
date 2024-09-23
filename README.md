@@ -33,7 +33,11 @@ Or like this:
 └── 📄 20190103.txt
 ```
 
-You want to **upload that data to a server, but only after the day of creation**. Additionally, you want to mark the directories as "in progress" on the remote server so that subsequent processing steps will not touch unfinished days of data while uploading. After the upload has finished, you want to remove the local files (this is optional).
+With this tool you can:
+
+- Upload that data to a server, right **after** the day of creation
+- Mark directories as "in progress" on the remote server so that subsequent processing steps will not touch unfinished days of data while uploading.
+- Optionally remove the local files after the upload is complete and verified with checksums
 
 This tool uses [SCP](https://en.wikipedia.org/wiki/Secure_copy_protocol) via the Python library [paramiko](https://github.com/paramiko/paramiko) to do that. It will write files named `.do-not-touch` in the local and remote directories during the upload process and delete them afterward.
 
