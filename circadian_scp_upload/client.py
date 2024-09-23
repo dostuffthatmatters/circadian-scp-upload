@@ -185,11 +185,11 @@ class DailyTransferClient:
     ) -> Literal["successful", "failed"]:
 
         self.callbacks.log_info(f"screening local directory")
-        local_directory = circadian_scp_upload.screen_directory(self.src_path, max_depth=1)
+        local_directory = circadian_scp_upload.screen_local_directory(self.src_path, max_depth=1)
         local_directory.filter_by_filenames(considered_filenames)
 
         self.callbacks.log_info(f"screening remote directory")
-        remote_directory = circadian_scp_upload.screen_directory(
+        remote_directory = circadian_scp_upload.screen_remote_directory(
             self.dst_path, self.remote_connection.connection, max_depth=1
         )
 

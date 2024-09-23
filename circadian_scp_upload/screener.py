@@ -97,7 +97,7 @@ def screen_remote_directory(
     return Directory(files=sorted(list(files)))
 
 
-def _get_recursive_files(root_directory: Directory, max_depth: Optional[int] = None) -> set[str]:
+def _get_recursive_files(root_directory: str, max_depth: Optional[int] = None) -> set[str]:
     paths: set[str] = set()
     if (max_depth is None) or (max_depth > 0):
         for f in os.listdir(root_directory):
@@ -105,7 +105,9 @@ def _get_recursive_files(root_directory: Directory, max_depth: Optional[int] = N
             if os.path.isfile(path):
                 paths.add(path)
             elif os.path.isdir(path):
-                paths.update(_get_recursive_files(path, max_depth - 1))
+                paths.update(
+                    _get_recursive_files(path, None if (max_depth is None) else (max_depth - 1))
+                )
     return paths
 
 
