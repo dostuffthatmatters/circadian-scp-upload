@@ -7,9 +7,7 @@ import pydantic
 
 
 class Directory(pydantic.BaseModel):
-    files: list[File] = pydantic.Field(
-        ..., description="Files in the directory"
-    )
+    files: list[File] = pydantic.Field(..., description="Files in the directory")
 
     def get_subdirectories(self) -> set[str]:
         subdirs: set[str] = set()
@@ -22,10 +20,7 @@ class Directory(pydantic.BaseModel):
         return subdirs
 
     def filter_by_filenames(self, relevant_filenames: set[str]) -> None:
-        self.files = [
-            file
-            for file in self.files if file.relative_path in relevant_filenames
-        ]
+        self.files = [file for file in self.files if file.relative_path in relevant_filenames]
 
 
 class File(pydantic.BaseModel):
@@ -46,8 +41,7 @@ class File(pydantic.BaseModel):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, File):
             return False
-        return ((self.filesize == other.filesize) and
-                (self.md5sum == other.md5sum) and
+        return ((self.filesize == other.filesize) and (self.md5sum == other.md5sum) and
                 (self.relative_path == other.relative_path))
 
     def __lt__(self, other: object) -> bool:
@@ -115,7 +109,8 @@ def screen_directory(
 
 
 def compare_directory_screens(
-    src_dir: Directory, dst_dir: Directory
+    src_dir: Directory,
+    dst_dir: Directory,
 ) -> tuple[set[File], set[File]]:
     """Compare two directory screens and return the differences.
     

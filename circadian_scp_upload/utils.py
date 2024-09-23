@@ -68,9 +68,8 @@ def _file_or_dir_name_to_date(
     assert isinstance(match, tuple)
     assert len(match) == 3
     try:
-        date = datetime.datetime.strptime(
-            f"{match[0]}-{match[1]}-{match[2]}", "-".join(keys)
-        ).date()
+        date = datetime.datetime.strptime(f"{match[0]}-{match[1]}-{match[2]}",
+                                          "-".join(keys)).date()
         return date if (date <= latest_date) else None
     except ValueError:
         return None
@@ -144,8 +143,7 @@ class UploadClientCallbacks(pydantic.BaseModel):
     )
     log_error: Callable[[str], None] = pydantic.Field(
         default=(lambda msg: print(f"ERROR - {msg}")),
-        description=
-        "Function to be called when logging a message or type ERROR.",
+        description="Function to be called when logging a message or type ERROR.",
     )
     should_abort_upload: Callable[[], bool] = pydantic.Field(
         default=(lambda: False),
@@ -169,27 +167,19 @@ class TwinFileLock:
 
     def aquire(self) -> None:
         if self.log_info is not None:
-            self.log_info(
-                f'acquiring lock on local machine at "{self.src_filepath}"'
-            )
+            self.log_info(f'acquiring lock on local machine at "{self.src_filepath}"')
         with open(self.src_filepath, "w") as f:
             f.write("locked by circadian_scp_upload")
         if self.log_info is not None:
-            self.log_info(
-                f'acquiring lock on remote server at "{self.dst_filepath}"'
-            )
+            self.log_info(f'acquiring lock on remote server at "{self.dst_filepath}"')
         self.remote_connection.run(f"touch {self.dst_filepath}")
 
     def release(self) -> None:
         if self.log_info is not None:
-            self.log_info(
-                f'releasing lock on remote server at "{self.dst_filepath}"'
-            )
+            self.log_info(f'releasing lock on remote server at "{self.dst_filepath}"')
         self.remote_connection.run(f"rm -rf {self.dst_filepath}")
 
         if self.log_info is not None:
-            self.log_info(
-                f'releasing lock on local machine at "{self.src_filepath}"'
-            )
+            self.log_info(f'releasing lock on local machine at "{self.src_filepath}"')
         if os.path.isfile(self.src_filepath):
             os.remove(self.src_filepath)

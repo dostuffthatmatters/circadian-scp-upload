@@ -39,8 +39,8 @@ class DailyTransferClient:
         dst_path: str,
         remove_files_after_upload: bool,
         variant: Literal["directories", "files"],
-        callbacks: circadian_scp_upload.
-        UploadClientCallbacks = circadian_scp_upload.UploadClientCallbacks(),
+        callbacks: circadian_scp_upload.UploadClientCallbacks = circadian_scp_upload.
+        UploadClientCallbacks(),
     ) -> None:
         self.src_path = src_path.rstrip("/")
         self.dst_path = dst_path.rstrip("/")
@@ -64,20 +64,14 @@ class DailyTransferClient:
            are equal, raise an exception (and end the function) if they differ
         7. Optionally remove the local directory"""
 
-        log_info: Callable[
-            [str],
-            None] = lambda msg: self.callbacks.log_info(f"{dir_name}: {msg}")
-        log_error: Callable[
-            [str],
-            None] = lambda msg: self.callbacks.log_error(f"{dir_name}: {msg}")
+        log_info: Callable[[str], None] = lambda msg: self.callbacks.log_info(f"{dir_name}: {msg}")
+        log_error: Callable[[str],
+                            None] = lambda msg: self.callbacks.log_error(f"{dir_name}: {msg}")
 
         src_dir_path = os.path.join(self.src_path, dir_name)
         dst_dir_path = f"{self.dst_path}/{dir_name}"
         twin_lock = circadian_scp_upload.utils.TwinFileLock(
-            src_dir_path,
-            dst_dir_path,
-            self.remote_connection.connection,
-            log_info=log_info
+            src_dir_path, dst_dir_path, self.remote_connection.connection, log_info=log_info
         )
         log_info(
             f"starting to upload local directory '{src_dir_path}'" +
@@ -126,12 +120,8 @@ class DailyTransferClient:
         # create all subdirectories on the remote server
         log_info("possibly creating all remote subdirectories")
         self.remote_connection.connection.run(
-            f"mkdir -p " + (
-                " ".join([
-                    f"{dst_dir_path}/{p}"
-                    for p in local_directory.get_subdirectories()
-                ])
-            )
+            f"mkdir -p " +
+            (" ".join([f"{dst_dir_path}/{p}" for p in local_directory.get_subdirectories()]))
         )
 
         # logging progress
@@ -268,9 +258,7 @@ class DailyTransferClient:
             f"Searching for dates in {self.src_path} using " +
             f"the regex {self.callbacks.dated_regex}"
         )
-        self.callbacks.log_info(
-            f"Found {len(src_items)} item(s) to be uploaded: {src_items}"
-        )
+        self.callbacks.log_info(f"Found {len(src_items)} item(s) to be uploaded: {src_items}")
 
         if self.variant == "directories":
             for item in src_items:
