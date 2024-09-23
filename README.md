@@ -55,7 +55,7 @@ First, the whole codebase has type hints and is strictly checked with [Mypy](htt
 
 Secondly, the date patterning is tested extensively, and the upload process of the files and directories is tested with an actual remote server by generating a bunch of sample files and directories and uploading them to that server. One can check out the output of the test runs in the [GitHub Actions](https://github.com/dostuffthatmatters/circadian-scp-upload/actions/workflows/test.yaml) of this repository - in the "Run pytests" step.
 
-Thirdly, after the upload, the checksum of the local and the remote directories/files is compared to ensure the upload was successful. Only if those checksums match will the client delete the local files. The file removal has to be actively enabled or disabled.
+Thirdly, after the upload, the checksum of the local and the remote directories/files is compared to ensure the upload was successful. Only if those checksums match will the client delete the local files. The file removal is disabled by default and has to be actively enabled.
 
 <br/>
 
