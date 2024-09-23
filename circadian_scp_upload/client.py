@@ -79,13 +79,13 @@ class DailyTransferClient:
         )
 
         log_info(f"screening local directory")
-        local_directory = circadian_scp_upload.screen_directory(src_dir_path)
+        local_directory = circadian_scp_upload.screen_local_directory(src_dir_path)
 
         log_info("possibly creating remote directory")
         self.remote_connection.connection.run(f"mkdir -p {dst_dir_path}")
 
         log_info(f"screening remote directory")
-        remote_directory = circadian_scp_upload.screen_directory(
+        remote_directory = circadian_scp_upload.screen_remote_directory(
             dst_dir_path, self.remote_connection.connection
         )
 
@@ -140,14 +140,13 @@ class DailyTransferClient:
         last_log_time = time.time()
         for f in sorted(list(files_not_in_sync)):
             self.remote_connection.transfer_process.put(
-                os.path.join(src_dir_path, f.relative_path),
-                f"{dst_dir_path}/{f.relative_path}"
+                os.path.join(src_dir_path, *f.relative_path.split("/")),
+                f"{dst_dir_path}/{f.relative_path}",
             )
             files_not_in_sync.remove(f)
             files_in_sync.add(f)
 
-            if ((time.time() - last_log_time)
-                > 60) or (len(files_not_in_sync) == 0):
+            if ((time.time() - last_log_time) > 60) or (len(files_not_in_sync) == 0):
                 _log_progress()
                 last_log_time = time.time()
 
@@ -155,7 +154,7 @@ class DailyTransferClient:
                 return "aborted"
 
         # compute remote checksum again
-        remote_directory = circadian_scp_upload.screen_directory(
+        remote_directory = circadian_scp_upload.screen_remote_directory(
             dst_dir_path, self.remote_connection.connection
         )
         updated_files_in_sync, updated_files_not_in_sync = circadian_scp_upload.compare_directory_screens(
@@ -186,9 +185,7 @@ class DailyTransferClient:
     ) -> Literal["successful", "failed"]:
 
         self.callbacks.log_info(f"screening local directory")
-        local_directory = circadian_scp_upload.screen_directory(
-            self.src_path, max_depth=1
-        )
+        local_directory = circadian_scp_upload.screen_directory(self.src_path, max_depth=1)
         local_directory.filter_by_filenames(considered_filenames)
 
         self.callbacks.log_info(f"screening remote directory")
