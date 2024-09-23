@@ -149,9 +149,8 @@ class DailyTransferClient:
             if ((time.time() - last_log_time) > 60) or (len(files_not_in_sync) == 0):
                 _log_progress()
                 last_log_time = time.time()
-
-            if self.callbacks.should_abort_upload():
-                return "aborted"
+                if self.callbacks.should_abort_upload():
+                    return "aborted"
 
         # compute remote checksum again
         remote_directory = circadian_scp_upload.screen_remote_directory(
@@ -182,7 +181,7 @@ class DailyTransferClient:
     def __upload_files(
         self,
         considered_filenames: set[str],
-    ) -> Literal["successful", "failed"]:
+    ) -> Literal["successful", "failed", "aborted"]:
 
         self.callbacks.log_info(f"screening local directory")
         local_directory = circadian_scp_upload.screen_local_directory(self.src_path, max_depth=1)
@@ -225,6 +224,9 @@ class DailyTransferClient:
             if self.remove_files_after_upload:
                 self.callbacks.log_info(f"removing local {f.relative_path}")
                 os.remove(os.path.join(self.src_path, f.relative_path))
+
+            if self.callbacks.should_abort_upload():
+                return "aborted"
 
         twin_lock.release()
 
