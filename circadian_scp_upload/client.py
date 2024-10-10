@@ -159,11 +159,16 @@ class DailyTransferClient:
         updated_files_in_sync, updated_files_not_in_sync = circadian_scp_upload.compare_directory_screens(
             local_directory, remote_directory
         )
-        assert len(files_not_in_sync) == 0, "This should not happen"
-        assert files_in_sync == updated_files_in_sync, "This should not happen"
         if len(updated_files_not_in_sync) > 0:
             log_error(
-                f"upload is not complete, some files are missing ({updated_files_not_in_sync})"
+                f"upload is not complete, some files were not uploaded - maybe they have been added to "
+                + f"the local directory during the upload: {updated_files_not_in_sync}"
+            )
+            return "failed"
+        if files_in_sync != updated_files_in_sync:
+            log_error(
+                "upload is not complete, some files were not uploaded - maybe they have been added to"
+                + f"the local directory during the upload: {files_in_sync - updated_files_in_sync}"
             )
             return "failed"
 
