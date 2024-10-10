@@ -1,6 +1,6 @@
 [project]
 name = "circadian_scp_upload"
-version = "0.5.1"
+version = "0.5.2"
 description = "Resumable, interruptible, SCP upload client for any files or directories generated day by day"
 authors = [{ name = "Moritz Makowski", email = "moritz.makowski@tum.de" }]
 dependencies = ["pydantic>=2.9.2", "filelock>=3.16.1", "fabric>=3.2.2", "tum-esm-utils>=2.3.2"]
