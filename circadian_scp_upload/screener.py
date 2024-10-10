@@ -126,7 +126,8 @@ def screen_local_directory(
         bytesize = os.path.getsize(path)
         md5sum = hashlib.md5(open(path, 'rb').read()).hexdigest()
         relative_path = path[len(root_directory) + 1 :].replace("\\", "/")
-        files.add(File(filesize=bytesize, md5sum=md5sum, relative_path=relative_path))
+        if relative_path not in [".do-not-touch", "upload-meta.json"]:
+            files.add(File(filesize=bytesize, md5sum=md5sum, relative_path=relative_path))
 
     return Directory(files=sorted(list(files)))
 
